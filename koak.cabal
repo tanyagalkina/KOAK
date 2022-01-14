@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fdc6ff547a83ff6609f65a41640ea166cb805236eb6e9589906fa8ce3a9a7c31
+-- hash: c96a11ca1ea1d44beb658aef21f0fa6059f422fbcefd78a15bb4ad981ea2d003
 
 name:           koak
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Data
       Lib
   other-modules:
       Paths_koak
