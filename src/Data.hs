@@ -1,65 +1,84 @@
 module Data where
 
+type AST = Node
 
-Data AST = Node Type Value AST
-    | Empty
+data Node = Node Type Value
 
-Data Type = None
-    | Double Type
-    | Integer Type
+data Type = None
+    | TDouble Type
+    | TInteger Type
 
-Data Stmt = [Kdefs]
+data Value = VStmt [Node]
+           | VKdefs Node Node
+           | VDefs Node Node
+           | VPrototype Node Node
+           | VPrototypeArgs [(Node, Node)] Node
+           | VArgsType ArgsType
+           | VExprs [Node]
+           | VForExpr (Node, Node) (Node, Node) Node Node
+           | VIfExpr Node Node Node
+           | VWhileExpr Node Node
+           | VExpr Node [(Node, Node)]
+           | VUnary Node Node
+           | VPostfix Node Node
+           | VCallExpr [Node]
+           | VPrimary Node
+           | VIdentifier String
+           | VDecimalConst Int
+           | VDoubleConst Double
+           | VLiteral Node
+           | VBinop Binop
+           | VUnop Unop
+           | VSubExpr Node
+           | VNothing
 
-Data Kdefs = Defs Exprs
+type Stmt = [Kdefs]
 
-Data Defs = Prototype Exprs
+data Kdefs = Kdefs Defs Exprs
 
--- add Unary / Binary
-Data Prototype = Identifier PrototypeArgs
+data Defs = Defs Prototype Exprs
 
-data PrototypeArgs = [(Identifier, Type)] Type
+-- Add Unary / Binary
+
+data Prototype = Prototype Identifier PrototypeArgs
+
+data PrototypeArgs = PrototypeArgs [(Identifier, ArgsType)] ArgsType
 
 data ArgsType = Int | Double | Void
 
-Data Exprs = ForExpr
-    | WhileExpr
-    | IfExpr
-    | [Expr]
+data Exprs = EForExpr
+    | EWhileExpr
+    | EIfExpr
+    | EExprs [Expr]
 
-data ForExpr = (Identifier, Expr) (Identifier, Expr) Expr Exprs
+data ForExpr = ForExpr (Identifier, Expr) (Identifier, Expr) Expr Exprs
 
-data IfExpr = Expr Exprs (Maybe Exprs)
+data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
 
-data WhileExpr = Expr Exprs
+data WhileExpr = WhileExpr Expr Exprs
 
-Data Expr = Unary [(Binop, SubExpr)]
+data Expr = Expr Unary [(Binop, SubExpr)]
 
-Data Unary = Unop Unop Unary | Postfix Postfix
+data SubExpr =  SEUnary Unary | SEExpr Expr
 
-Data Postfix = Primary (Maybe CallExpr)
+data Unary = Unop Unop Unary | Postfix Postfix
 
-Data CallExpr = [Maybe Expr]
+data Postfix = MyPostfix Primary (Maybe CallExpr)
 
-Data Primary = Id Identifier
+type CallExpr = [Maybe Expr]
+
+data Primary = Id Identifier
     | Lit Literal
-    | Exprs Exprs
+    | PExprs Exprs
 
 type Identifier = String
 
--- Dot, Necessary ?
+type DecimalConst = Int
 
-Data DecimalConst = Int
+type DoubleConst = Double
 
-Data DoubleConst = Double
+data Literal = LInt DecimalConst | LDouble DoubleConst
 
-Data Literal = Int DecimalConst | Double DoubleConst
+data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
 
-Data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
-
-Data Unop = Not | Minus
-
-Data SubExpr =  Unary Unary | Expr Expr
-
-
-
-
+data Unop = Not | Minus
