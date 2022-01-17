@@ -88,14 +88,34 @@ parseInt = (\x -> -x) <$> (parseNeg *> parseUInt)
         parsePos = parseChar '+'
 
 parseFloatStr :: Parser String
-parseFloatStr = parseF <|> show <$> parseInt
+parseFloatStr = parseNum <|> show <$> parseInt
         where
             parseDot = parseChar '.'
             myConcat = \x y z -> show x ++ [y] ++ z
-            parseF =  myConcat <$> parseInt <*> parseDot <*> parseUIntStr
+            parseNum =  myConcat <$> parseInt <*> parseDot <*> parseUIntStr
+
+parseDotFloatStr :: Parser String
+parseDotFloatStr = parseNum
+        where
+            parseDot = parseChar '.'
+            myConcat =  \y z -> "0" ++ [y] ++ z
+            parseNum =  myConcat <$> parseDot <*> parseUIntStr
+
+parseOnlyDotFloatStr :: Parser String
+parseOnlyDotFloatStr = parseNum <|> parseDotFloatStr
+        where
+            parseDot = parseChar '.'
+            myConcat = \x y z -> show x ++ [y] ++ z
+            parseNum =  myConcat <$> parseInt <*> parseDot <*> parseUIntStr
 
 parseFloat :: Parser Float
 parseFloat = read <$> parseFloatStr
 
 parseDouble :: Parser Double
 parseDouble = read <$> parseFloatStr
+
+parseDotDouble :: Parser Double
+parseDotDouble = read <$> (parseFloatStr <|> parseDotFloatStr)
+
+parseOnlyDotDouble :: Parser Double
+parseOnlyDotDouble = read <$> parseOnlyDotFloatStr
