@@ -1,0 +1,25 @@
+name : Koak
+on :
+  push :
+    branches :
+      - master
+      - main
+      - dev
+
+jobs :
+  unit-test :
+    runs-on : ubuntu-20.04
+    container : epitechcontent/epitest-docker
+    steps :
+      - name : Checkout repo
+        uses : actions/checkout@v2
+      - name: Permissions bug workaround
+        run: "chown -R $(id -un):$(id -gn) ~"
+      - name : Run unit test
+        run : stack test --allow-different-user --coverage > unit_test_output
+      - name : Upload file
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: unit_test_output
+          path: unit_test_output
