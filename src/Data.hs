@@ -5,7 +5,7 @@ type AST = Node
 data Node = Node Type Value
     deriving (Show, Eq)
 
-data Type = None
+data Type = TNone
     | TDouble Type
     | TInteger Type
     deriving (Show, Eq)
@@ -39,22 +39,44 @@ data Value = VStmt [Node]
 type Stmt = [Kdefs]
 
 -- 'def' defs ';' | expressions ';'
-data Kdefs = Kdefs Defs Exprs
-    deriving (Show, Eq)
+data Kdefs = KDefs Defs
+    | KExprs Exprs
+    deriving (Eq)
+
+instance Show Kdefs where
+    show (KDefs defs) = "\nDefs ->\n" ++ show defs
+    show (KExprs exprs) = "\nExprs ->\n" ++ show exprs
 
 -- prototype expressions
 data Defs = Defs Prototype Exprs
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Defs where
+    show (Defs proto exprs) = "\tPrototype ->\n" ++ show proto
+                                                ++ "\n\tBody      ->\n"
+                                                ++ show exprs
+                                                ++ "\n"
 
 -- ADD UNARY / BINARY IN PROTOTYPE
 
 --  ( 'unary' . decimal_const ? | 'binary' . decimal_const ? ) identifier prototype_args
 data Prototype = Prototype Identifier PrototypeArgs
-    deriving (Show, Eq)
+    deriving (Eq)
 
--- '(' ( identifier ':' type ) * ')' ':' type
+instance Show Prototype where
+    show (Prototype id types) = "\t\tName  -> " ++ show id
+                                              ++ "\n\t\tTypes ->\n"
+                                              ++ show types
+
+-- '(' ( identifier ':' type ','? ) * ')' ':' type
 data PrototypeArgs = PrototypeArgs [(Identifier, ArgsType)] ArgsType
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show PrototypeArgs where
+    show (PrototypeArgs [] ret) = "\t\t\tReturn -> " ++ show ret
+    show (PrototypeArgs args ret) = "\t\t\tArgs   -> " ++ show args
+                                                     ++ "\n\t\t\tReturn -> "
+                                                     ++ show ret
 
 -- 'int' | 'double' | 'void'
 data ArgsType = Int | Double | Void
@@ -65,7 +87,16 @@ data Exprs = EForExpr ForExpr
     | EWhileExpr WhileExpr
     | EIfExpr IfExpr
     | EExprs [Expr]
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Exprs where
+    show (EForExpr expr) = "\t\tFor -> " ++ show expr
+    show (EWhileExpr expr) = "\t\tWhile -> " ++ show expr
+    show (EIfExpr expr) = "\t\tIf -> " ++ show expr
+    show (EExprs []) = ""
+    show (EExprs (x:xs)) = "\t\tExpr -> " ++ show x
+                                              ++ "\n"
+                                              ++ show (EExprs xs)
 
 -- 'for' identifier '=' expression ',' identifier '<' expression ',' expression 'in' expressions
 data ForExpr = ForExpr (Identifier, Expr) (Identifier, Expr) Expr Exprs
@@ -81,10 +112,8 @@ data WhileExpr = WhileExpr Expr Exprs
 
 -- UNARY OR EXPRESSION -> ONE TO REMOVE / SAME
 
--- unary (# binop ( unary | expression ) ) *
-data Expr = Expr Unary [(Binop, SubExpr)]
-    deriving (Show, Eq)
-data SubExpr =  EUnary Unary | EExpr Expr
+-- unary (# binop ( unary ) )*
+data Expr = Expr Unary [(Binop, Unary)]
     deriving (Show, Eq)
 
 -- # unop unary | postfix
