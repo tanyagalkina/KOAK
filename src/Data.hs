@@ -45,7 +45,7 @@ data Kdefs = KDefs Defs
 
 instance Show Kdefs where
     show (KDefs defs) = "\nDefs ->\n" ++ show defs
-    show (KExprs exprs) = "\nExprs ->\n" ++ show exprs
+    show (KExprs exprs) = "\nExprs ->\n\t" ++ show exprs
 
 -- prototype expressions
 data Defs = Defs Prototype Exprs
@@ -53,7 +53,7 @@ data Defs = Defs Prototype Exprs
 
 instance Show Defs where
     show (Defs proto exprs) = "\tPrototype ->\n" ++ show proto
-                                                ++ "\n\tBody      ->\n"
+                                                ++ "\n\tBody      ->\n\t\t"
                                                 ++ show exprs
                                                 ++ "\n"
 
@@ -90,11 +90,11 @@ data Exprs = EForExpr ForExpr
     deriving (Eq)
 
 instance Show Exprs where
-    show (EForExpr expr) = "\t\tFor -> " ++ show expr
-    show (EWhileExpr expr) = "\t\tWhile -> " ++ show expr
-    show (EIfExpr expr) = "\t\tIf -> " ++ show expr
+    show (EForExpr expr) = "For -> " ++ show expr
+    show (EWhileExpr expr) = "While -> " ++ show expr
+    show (EIfExpr expr) = "If -> " ++ show expr
     show (EExprs []) = ""
-    show (EExprs (x:xs)) = "\t\tExpr -> " ++ show x
+    show (EExprs (x:xs)) = "Expr -> " ++ show x
                                               ++ "\n"
                                               ++ show (EExprs xs)
 
@@ -114,15 +114,30 @@ data WhileExpr = WhileExpr Expr Exprs
 
 -- unary (# binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Expr where
+    show (Expr unary rest) = show unary ++ " "
+                                        ++ show rest
 
 -- # unop unary | postfix
 data Unary = Unop Unop Unary | UPostfix Postfix
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Unary where
+    show (Unop unop unary) = show unop ++ " "
+                                       ++ show unary
+    show (UPostfix postfix) = show postfix
 
 -- primary call_expr?
 data Postfix = Postfix Primary (Maybe CallExpr)
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Postfix where
+    show (Postfix primary Nothing) = show primary
+    show (Postfix primary callExpr) = show primary ++ " ( "
+                                                   ++ show callExpr
+                                                   ++ " )"
 
 -- '(' ( expression (',' expression ) *) ? ')'
 type CallExpr = [Expr]
@@ -144,10 +159,18 @@ type DoubleConst = Double
 
 --  decimal_const | double_const
 data Literal = LInt DecimalConst | LDouble DoubleConst
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Literal where
+    show (LInt nb) = show nb
+    show (LDouble nb) = show nb
     
 data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
     deriving (Show, Eq)
 
 data Unop = Not | Minus
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Unop where
+    show Not = "!"
+    show Minus = "-"
