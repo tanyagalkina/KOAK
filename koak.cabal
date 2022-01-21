@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c96a11ca1ea1d44beb658aef21f0fa6059f422fbcefd78a15bb4ad981ea2d003
+-- hash: 3425c654484f53e4bc3fa5815348c76bf01b219b3e24ac3b2ea5d9f8762356ac
 
 name:           koak
 version:        0.1.0.0
@@ -29,12 +29,18 @@ library
   exposed-modules:
       Data
       Lib
+      Parser
   other-modules:
       Paths_koak
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , bytestring
+    , llvm-hs
+    , llvm-hs-pretty
+    , llvm-hs-pure
+    , mtl
   default-language: Haskell2010
 
 executable koak-exe
@@ -46,7 +52,12 @@ executable koak-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , koak
+    , llvm-hs
+    , llvm-hs-pretty
+    , llvm-hs-pure
+    , mtl
   default-language: Haskell2010
 
 test-suite koak-test
@@ -59,5 +70,10 @@ test-suite koak-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , koak
+    , llvm-hs
+    , llvm-hs-pretty
+    , llvm-hs-pure
+    , mtl
   default-language: Haskell2010
