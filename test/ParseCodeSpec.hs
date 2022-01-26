@@ -1,12 +1,11 @@
-module ParserLexerSpec (spec) where
+module ParseCodeSpec (spec) where
 
 import Test.Hspec
 
 import Parser
-import Data
 
-import ParserLexer
-import Data (WhileExpr(WhileExpr))
+import Data
+import ParseCode
 
 spec :: Spec
 spec = do

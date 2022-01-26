@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module ParserLexer where
+module ParseCode where
 
 -- Import
 
