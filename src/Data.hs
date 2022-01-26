@@ -3,7 +3,14 @@ module Data where
 type AST = Node
 
 data Node = Node Type Value
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Node where
+    show (Node t VNothing) = ""
+    show (Node t v) = "\nType -> " ++ show t
+                                   ++ "  ---  Value -> "
+                                   ++ show v
+                                   ++ ""
 
 data Type = TUndefine
     | TNone
@@ -33,9 +40,47 @@ data Value =
   | VLiteral Node
   | VBinop Binop
   | VUnop Unop
-  | VSubExpr Node
   | VNothing
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Value where
+    show (VStmt t) = "Stmt\n" ++ show t
+    show (VKdefs n) = "Kdefs\n" ++ show n
+    show (VDefs n1 n2) = "Defs\n" ++ show n1 ++ " " ++ show n2
+    show (VPrototype n1 n2) = "Prototype\n" ++ show n1 ++ " " ++ show n2
+    show (VPrototypeArgs t n) = "ProtypeArgs\n" ++ show t ++ " " ++ show n
+    show (VArgsType at) = "ArgsType\n" ++ show at
+    show (VExprs t) = "Exprs\n" ++ show t
+    show (VForExpr (n1, n2) (n3, n4) n5 n6) = "ForExpr\n" ++ "("
+                                                         ++ show n1
+                                                         ++ ", "
+                                                         ++ show n2
+                                                         ++ ") ("
+                                                         ++ show n3
+                                                         ++ ", "
+                                                         ++ show n4
+                                                         ++ ") "
+                                                         ++ show n5
+                                                         ++ " "
+                                                         ++ show n6
+    show (VIfExpr n1 n2 n3) = "IfExpr\n" ++ show n1
+                                        ++ " "
+                                        ++ show n2
+                                        ++ " "
+                                        ++ show n3
+    show (VWhileExpr n1 n2) = "WhileExpr\n" ++ show n1 ++ " " ++ show n2
+    show (VExpr n t) = "Expr\n" ++ show n ++ " " ++ show t
+    show (VUnary n1 n2) = "Unary\n" ++ show n1 ++ " " ++ show n2
+    show (VPostfix n1 n2) = "Postfix\n" ++ show n1 ++ " " ++ show n2
+    show (VCallExpr t) = "CallExpr\n" ++ show t
+    show (VPrimary n) = "Primary\n" ++ show n
+    show (VIdentifier s) = "Identifier\n" ++ show s
+    show (VDecimalConst i) = "DecimalConst\n" ++ show i
+    show (VDoubleConst d) = "DoubleConst\n" ++ show d
+    show (VLiteral n) = "Literal\n" ++ show n
+    show (VBinop b) = "Binop\n" ++ show b
+    show (VUnop u) = "Unop\n" ++ show u
+    show VNothing = "Nothing"
 
 -- kdefs* #eof
 type Stmt = [Kdefs]

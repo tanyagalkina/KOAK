@@ -31,6 +31,7 @@ library
       Lib
       Parser
       ParseCode
+      CreateAST
   other-modules:
       Paths_koak
   hs-source-dirs:

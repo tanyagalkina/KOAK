@@ -4,14 +4,13 @@ module CreateAST where
 -- Import
 
 import Control.Applicative
-import GHC.Tuple
 
 import Parser
 
 import Data
 import ParseCode
 
--- create AST
+-- create AST / EDITABLE
 
 createAST :: Parser AST
 createAST = createNTN . createStmt <$> parseStmt
