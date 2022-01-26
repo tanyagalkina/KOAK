@@ -127,7 +127,7 @@ createExprs :: Exprs -> Value
 createExprs (EForExpr f) = VExprs [createNTN (createForExpr f)]
 createExprs (EWhileExpr w) = VExprs [createNTN (createWhileExpr w)]
 createExprs (EIfExpr i) = VExprs [createNTN (createIfExpr i)]
-createExprs (EExprs e) = VExprs (fmap (createNTN . createExpr) e)
+createExprs (EExpr e) = VExprs (fmap (createNTN . createExpr) e)
 
 -- create Args Type
 

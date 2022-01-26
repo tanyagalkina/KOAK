@@ -123,7 +123,7 @@ testParsePrimary = do
         runParser parsePrimary "guy  " `shouldBe` Just (PId "guy", "")
     it "runParser parsePrimary \"(1 + 1)\"" $ do
         runParser parsePrimary "(1 + 1)"
-        `shouldBe` Just (PExprs (EExprs [Expr (UPostfix (Postfix (PLit (LInt 1)) Nothing)) [(Add,UPostfix (Postfix (PLit (LInt 1)) Nothing))]]),"")
+        `shouldBe` Just (PExprs (EExpr [Expr (UPostfix (Postfix (PLit (LInt 1)) Nothing)) [(Add,UPostfix (Postfix (PLit (LInt 1)) Nothing))]]),"")
     it "runParser parsePrimary \" \"" $ do
         runParser parsePrimary " " `shouldBe` Nothing
 
@@ -212,7 +212,7 @@ testParseForExpr = do
                                      ("a",Expr (UPostfix (Postfix (PLit (LInt 3)) Nothing)) [])
                                      (Expr (UPostfix (Postfix (PId "a") Nothing))
                                         [(Assign,UPostfix (Postfix (PId "a") Nothing)),(Add,UPostfix (Postfix (PLit (LInt 1)) Nothing))])
-                                     (EExprs
+                                     (EExpr
                                         [Expr (UPostfix (Postfix (PId "b") Nothing))
                                             [(Assign,UPostfix (Postfix (PId "b") Nothing)),(Add,UPostfix (Postfix (PLit (LInt 1)) Nothing))]]),"")
     it "runParser parseForExpr \"fora=1, a<3, a = a + 1 inb = b + 1\"" $ do
@@ -226,15 +226,15 @@ testParseIfExpr = do
         runParser parseIfExpr "if a = b then c = b"
             `shouldBe` Just (IfExpr (Expr (UPostfix (Postfix (PId "a") Nothing))
                                           [(Assign,UPostfix (Postfix (PId "b") Nothing))])
-                                    (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                    (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                             [(Assign,UPostfix (Postfix (PId "b") Nothing))]]) Nothing,"")
     it "runParser parseIfExpr \"if a = b then c = b else c = a\"" $ do
         runParser parseIfExpr "if a = b then c = b else c = a"
             `shouldBe` Just (IfExpr (Expr (UPostfix (Postfix (PId "a") Nothing))
                                           [(Assign,UPostfix (Postfix (PId "b") Nothing))])
-                                    (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                    (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                                   [(Assign,UPostfix (Postfix (PId "b") Nothing))]])
-                                    (Just (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                    (Just (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                                         [(Assign,UPostfix (Postfix (PId "a") Nothing))]])),"")
     it "runParser parseIfExpr \"ifa = b then c = b else c = a\"" $ do
         runParser parseIfExpr "ifa = b then c = b else c = a" `shouldBe` Nothing
@@ -247,7 +247,7 @@ testParseWhileExpr = do
         runParser parseWhileExpr "while a == b do c = b"
             `shouldBe` Just (WhileExpr (Expr (UPostfix (Postfix (PId "a") Nothing))
                                              [(Eq,UPostfix (Postfix (PId "b") Nothing))])
-                                       (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                       (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                                      [(Assign,UPostfix (Postfix (PId "b") Nothing))]]),"")
     it "runParser parseWhileExpr \"whilea == b then c = b\"" $ do
         runParser parseWhileExpr "whilea == b then c = b" `shouldBe` Nothing
@@ -260,15 +260,15 @@ testParseExprs = do
         runParser parseExprs "while a == b do c = b"
             `shouldBe` Just (EWhileExpr (WhileExpr (Expr (UPostfix (Postfix (PId "a") Nothing))
                                                          [(Eq,UPostfix (Postfix (PId "b") Nothing))])
-                                                   (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                                   (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                                                  [(Assign,UPostfix (Postfix (PId "b") Nothing))]])),"")
     it "runParser parseExprs \"if a = b then c = b else c = a\"" $ do
         runParser parseExprs "if a = b then c = b else c = a"
             `shouldBe` Just (EIfExpr (IfExpr (Expr (UPostfix (Postfix (PId "a") Nothing))
                                                    [(Assign,UPostfix (Postfix (PId "b") Nothing))])
-                                             (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                             (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                                            [(Assign,UPostfix (Postfix (PId "b") Nothing))]])
-                                             (Just (EExprs [Expr (UPostfix (Postfix (PId "c") Nothing))
+                                             (Just (EExpr [Expr (UPostfix (Postfix (PId "c") Nothing))
                                                                  [(Assign,UPostfix (Postfix (PId "a") Nothing))]]))),"")
     it "runParser parseExprs \"for a=1, a<3, a = a + 1 in b = b + 1\"" $ do
         runParser parseExprs "for a=1, a<3, a = a + 1 in b = b + 1"
@@ -276,11 +276,11 @@ testParseExprs = do
                                                ("a",Expr (UPostfix (Postfix (PLit (LInt 3)) Nothing)) [])
                                                (Expr (UPostfix (Postfix (PId "a") Nothing))
                                                      [(Assign,UPostfix (Postfix (PId "a") Nothing)),(Add,UPostfix (Postfix (PLit (LInt 1)) Nothing))])
-                                               (EExprs [Expr (UPostfix (Postfix (PId "b") Nothing))
+                                               (EExpr [Expr (UPostfix (Postfix (PId "b") Nothing))
                                                              [(Assign,UPostfix (Postfix (PId "b") Nothing)),(Add,UPostfix (Postfix (PLit (LInt 1)) Nothing))]])),"")
     it "runParser parseExprs \"a + 1 : a + 2\"" $ do
         runParser parseExprs "a + 1 : a + 2"
-            `shouldBe` Just (EExprs [Expr (UPostfix (Postfix (PId "a")
+            `shouldBe` Just (EExpr [Expr (UPostfix (Postfix (PId "a")
                                                              Nothing))
                                           [(Add, UPostfix (Postfix (PLit (LInt 1))
                                                                    Nothing))],
@@ -337,7 +337,7 @@ testParseDefs = do
             `shouldBe` Just (Defs (Prototype "plouf"
                                              (PrototypeArgs [("a",Int)]
                                                             Void))
-                                  (EExprs [Expr (UPostfix (Postfix (PLit (LInt 1))
+                                  (EExpr [Expr (UPostfix (Postfix (PLit (LInt 1))
                                                                    Nothing))
                                                 [(Add, UPostfix (Postfix (PLit (LInt 1))
                                                                 Nothing))]]),"")
@@ -346,7 +346,7 @@ testParseDefs = do
             `shouldBe` Just (Defs (Prototype "mdr"
                                              (PrototypeArgs [("a", Int), ("b", Double)]
                                                             Double))
-                                  (EExprs [Expr (UPostfix (Postfix (PId "a")
+                                  (EExpr [Expr (UPostfix (Postfix (PId "a")
                                                                    Nothing))
                                                 [(Assign, UPostfix (Postfix (PLit (LInt 4))
                                                                             Nothing)),
@@ -362,13 +362,13 @@ testParseKdefs = do
             `shouldBe` Just (KDefs (Defs (Prototype "plouf"
                                                     (PrototypeArgs [("a",Int)]
                                                                    Void))
-                                         (EExprs [Expr (UPostfix (Postfix (PLit (LInt 1))
+                                         (EExpr [Expr (UPostfix (Postfix (PLit (LInt 1))
                                                                                Nothing))
                                                        [(Add, UPostfix (Postfix (PLit (LInt 1))
                                                                                 Nothing))]])),"")
     it "runParser parseKdefs \"a = 1 + 1;\"" $ do
         runParser parseKdefs "a = 1 + 1;"
-            `shouldBe` Just (KExprs (EExprs [Expr (UPostfix (Postfix (PId "a")
+            `shouldBe` Just (KExprs (EExpr [Expr (UPostfix (Postfix (PId "a")
                                                                      Nothing))
                                                   [(Assign, UPostfix (Postfix (PLit (LInt 1))
                                                                               Nothing)),
@@ -384,11 +384,11 @@ testParseStmt = do
             `shouldBe` Just ([KDefs (Defs (Prototype "test"
                                                      (PrototypeArgs [("x",Double)]
                                                                     Double))
-                                          (EExprs [Expr (UPostfix (Postfix (PId "x")
+                                          (EExpr [Expr (UPostfix (Postfix (PId "x")
                                                                            Nothing))
                                                         [(Add,UPostfix (Postfix (PLit (LDouble 2.0))
                                                                                 Nothing))]])),
-                             KExprs (EExprs [Expr (UPostfix (Postfix (PId "test")
+                             KExprs (EExpr [Expr (UPostfix (Postfix (PId "test")
                                                                      (Just [Expr (UPostfix (Postfix (PLit (LDouble 5.0))
                                                                                                     Nothing)) []])))
                                                   [(Sub, UPostfix (Postfix (PLit (LInt 2))

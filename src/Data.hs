@@ -70,7 +70,7 @@ data ArgsType = Int | Double | Void
 data Exprs = EForExpr ForExpr
     | EWhileExpr WhileExpr
     | EIfExpr IfExpr
-    | EExprs [Expr]
+    | EExpr [Expr]
     deriving (Show, Eq)
 
 -- 'for' identifier '=' expression ',' identifier '<' expression ',' expression 'in' expressions

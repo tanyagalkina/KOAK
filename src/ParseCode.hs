@@ -55,10 +55,10 @@ parseExprs :: Parser Exprs
 parseExprs = EForExpr <$> parseForExpr
     <|> EIfExpr <$> parseIfExpr
     <|> EWhileExpr <$> parseWhileExpr
-    <|> (\e es -> EExprs (e:es))
+    <|> (\e es -> EExpr (e:es))
         <$> parseExpr
         <*> parseSome (parseTextWithSpaces ":" *> parseExpr)
-    <|> (\e -> EExprs [e]) <$> parseExpr
+    <|> (\e -> EExpr [e]) <$> parseExpr
 
 -- parseForExpr
 
