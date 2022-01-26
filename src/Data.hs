@@ -2,7 +2,7 @@ module Data where
 
 -- FOR BETTER SHOW
 -- import Text.Pretty.Simple (pPrint)
--- 
+-- pPrint $ ...
 
 type AST = Node
 
