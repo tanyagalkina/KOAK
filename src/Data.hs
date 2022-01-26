@@ -1,5 +1,9 @@
 module Data where
 
+-- FOR BETTER SHOW
+-- import Text.Pretty.Simple (pPrint)
+-- 
+
 type AST = Node
 
 data Node = Node Type Value
