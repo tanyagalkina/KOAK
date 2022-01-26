@@ -121,8 +121,8 @@ parseCallExpr =  parseOP *> parseListOfExprs <* parseCP
 -- parsePrimary
 
 parsePrimary :: Parser Primary
-parsePrimary = Id <$> parseIdentifier
-    <|> Lit <$> parseLiteral
+parsePrimary = PId <$> parseIdentifier
+    <|> PLit <$> parseLiteral
     <|> PExprs <$> (parseOP *> parseExprs <* parseCP)
 
 -- parseIdentifier

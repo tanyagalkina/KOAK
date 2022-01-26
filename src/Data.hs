@@ -5,34 +5,36 @@ type AST = Node
 data Node = Node Type Value
     deriving (Show, Eq)
 
-data Type = TNone
+data Type = TUndefine
+    | TNone
     | TDouble Type
     | TInteger Type
     deriving (Show, Eq)
 
-data Value = VStmt [Node]
-           | VKdefs Node Node
-           | VDefs Node Node
-           | VPrototype Node Node
-           | VPrototypeArgs [(Node, Node)] Node
-           | VArgsType ArgsType
-           | VExprs [Node]
-           | VForExpr (Node, Node) (Node, Node) Node Node
-           | VIfExpr Node Node Node
-           | VWhileExpr Node Node
-           | VExpr Node [(Node, Node)]
-           | VUnary Node Node
-           | VPostfix Node Node
-           | VCallExpr [Node]
-           | VPrimary Node
-           | VIdentifier String
-           | VDecimalConst Int
-           | VDoubleConst Double
-           | VLiteral Node
-           | VBinop Binop
-           | VUnop Unop
-           | VSubExpr Node
-           | VNothing
+data Value =
+    VStmt [Node]
+  | VKdefs Node
+  | VDefs Node Node
+  | VPrototype Node Node
+  | VPrototypeArgs [(Node, Node)] Node
+  | VArgsType ArgsType
+  | VExprs [Node]
+  | VForExpr (Node, Node) (Node, Node) Node Node
+  | VIfExpr Node Node Node
+  | VWhileExpr Node Node
+  | VExpr Node [(Node, Node)]
+  | VUnary Node Node
+  | VPostfix Node Node
+  | VCallExpr [Node]
+  | VPrimary Node
+  | VIdentifier String
+  | VDecimalConst Int
+  | VDoubleConst Double
+  | VLiteral Node
+  | VBinop Binop
+  | VUnop Unop
+  | VSubExpr Node
+  | VNothing
     deriving (Show, Eq)
 
 -- kdefs* #eof
@@ -98,8 +100,8 @@ data Postfix = Postfix Primary (Maybe CallExpr)
 type CallExpr = [Expr]
 
 -- identifier | literal | '(' expressions ')'
-data Primary = Id Identifier
-    | Lit Literal
+data Primary = PId Identifier
+    | PLit Literal
     | PExprs Exprs
     deriving (Show, Eq)
 
