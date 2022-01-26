@@ -41,42 +41,21 @@ type Stmt = [Kdefs]
 -- 'def' defs ';' | expressions ';'
 data Kdefs = KDefs Defs
     | KExprs Exprs
-    deriving (Eq)
-
-instance Show Kdefs where
-    show (KDefs defs) = "\nDefs ->\n" ++ show defs
-    show (KExprs exprs) = "\nExprs ->\n\t" ++ show exprs
+    deriving (Show, Eq)
 
 -- prototype expressions
 data Defs = Defs Prototype Exprs
-    deriving (Eq)
-
-instance Show Defs where
-    show (Defs proto exprs) = "\tPrototype ->\n" ++ show proto
-                                                ++ "\n\tBody      ->\n\t\t"
-                                                ++ show exprs
-                                                ++ "\n"
+    deriving (Show, Eq)
 
 -- ADD UNARY / BINARY IN PROTOTYPE
 
 --  ( 'unary' . decimal_const ? | 'binary' . decimal_const ? ) identifier prototype_args
 data Prototype = Prototype Identifier PrototypeArgs
-    deriving (Eq)
-
-instance Show Prototype where
-    show (Prototype id types) = "\t\tName  -> " ++ show id
-                                              ++ "\n\t\tTypes ->\n"
-                                              ++ show types
+    deriving (Show, Eq)
 
 -- '(' ( identifier ':' type ','? ) * ')' ':' type
 data PrototypeArgs = PrototypeArgs [(Identifier, ArgsType)] ArgsType
-    deriving (Eq)
-
-instance Show PrototypeArgs where
-    show (PrototypeArgs [] ret) = "\t\t\tReturn -> " ++ show ret
-    show (PrototypeArgs args ret) = "\t\t\tArgs   -> " ++ show args
-                                                     ++ "\n\t\t\tReturn -> "
-                                                     ++ show ret
+    deriving (Show, Eq)
 
 -- 'int' | 'double' | 'void'
 data ArgsType = Int | Double | Void
@@ -87,16 +66,7 @@ data Exprs = EForExpr ForExpr
     | EWhileExpr WhileExpr
     | EIfExpr IfExpr
     | EExprs [Expr]
-    deriving (Eq)
-
-instance Show Exprs where
-    show (EForExpr expr) = "For -> " ++ show expr
-    show (EWhileExpr expr) = "While -> " ++ show expr
-    show (EIfExpr expr) = "If -> " ++ show expr
-    show (EExprs []) = ""
-    show (EExprs (x:xs)) = "Expr -> " ++ show x
-                                              ++ "\n"
-                                              ++ show (EExprs xs)
+    deriving (Show, Eq)
 
 -- 'for' identifier '=' expression ',' identifier '<' expression ',' expression 'in' expressions
 data ForExpr = ForExpr (Identifier, Expr) (Identifier, Expr) Expr Exprs
@@ -114,30 +84,15 @@ data WhileExpr = WhileExpr Expr Exprs
 
 -- unary (# binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
-    deriving (Eq)
-
-instance Show Expr where
-    show (Expr unary rest) = show unary ++ " "
-                                        ++ show rest
+    deriving (Show, Eq)
 
 -- # unop unary | postfix
 data Unary = Unop Unop Unary | UPostfix Postfix
-    deriving (Eq)
-
-instance Show Unary where
-    show (Unop unop unary) = show unop ++ " "
-                                       ++ show unary
-    show (UPostfix postfix) = show postfix
+    deriving (Show, Eq)
 
 -- primary call_expr?
 data Postfix = Postfix Primary (Maybe CallExpr)
-    deriving (Eq)
-
-instance Show Postfix where
-    show (Postfix primary Nothing) = show primary
-    show (Postfix primary callExpr) = show primary ++ " ( "
-                                                   ++ show callExpr
-                                                   ++ " )"
+    deriving (Show, Eq)
 
 -- '(' ( expression (',' expression ) *) ? ')'
 type CallExpr = [Expr]
@@ -159,18 +114,10 @@ type DoubleConst = Double
 
 --  decimal_const | double_const
 data Literal = LInt DecimalConst | LDouble DoubleConst
-    deriving (Eq)
-
-instance Show Literal where
-    show (LInt nb) = show nb
-    show (LDouble nb) = show nb
+    deriving (Show, Eq)
     
 data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
     deriving (Show, Eq)
 
 data Unop = Not | Minus
-    deriving (Eq)
-
-instance Show Unop where
-    show Not = "!"
-    show Minus = "-"
+    deriving (Show, Eq)
