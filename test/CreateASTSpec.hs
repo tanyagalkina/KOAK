@@ -7,7 +7,6 @@ import Parser
 import Data
 import ParseCode
 import CreateAST
-import Data (Value(VPrototype, VNothing), Type (TUndefine))
 
 spec :: Spec
 spec = do

@@ -7,12 +7,14 @@ module Data where
 type AST = Node
 
 data Node = Node Type Value
+    | Error String
     deriving (Show, Eq)
 
 data Type = TUndefine
     | TNone
-    | TDouble Type
-    | TInteger Type
+    | TDouble
+    | TInteger
+    | TFunc [Type]
     deriving (Show, Eq)
 
 data Value =

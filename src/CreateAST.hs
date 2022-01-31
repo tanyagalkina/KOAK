@@ -49,8 +49,15 @@ createBinop = VBinop
 -- create Literal
 
 createLiteral :: Literal -> Value
-createLiteral (LInt i) = VLiteral (createNTN (createDecimalConst i))
-createLiteral (LDouble d) = VLiteral (createNTN (createDoubleConst d))
+createLiteral (LInt i) =
+    VLiteral (Node TInteger (createDecimalConst i))
+createLiteral (LDouble d) =
+    VLiteral (Node TDouble (createDoubleConst d))
+
+createLiteralNode :: Value -> Node
+createLiteralNode v@(VLiteral (Node TInteger _)) = Node TInteger v
+createLiteralNode v@(VLiteral (Node TDouble _)) = Node TDouble v
+createLiteralNode v = Error "Typing of literal failed"
 
 -- create Identifier
 
@@ -61,7 +68,7 @@ createIdentifier = VIdentifier
 
 createPrimary :: Primary -> Value
 createPrimary (PId i) = VPrimary (createNTN (createIdentifier i))
-createPrimary (PLit l) = VPrimary (createNTN (createLiteral l))
+createPrimary (PLit l) = VPrimary (createLiteralNode (createLiteral l))
 createPrimary (PExprs es) = VPrimary (createNTN (createExprs es))
 
 -- create Call Expr
@@ -81,7 +88,7 @@ createPostfix (Postfix p (Just c)) = VPostfix (createNTN (createPrimary p))
 -- create Unary
 
 createUnary :: Unary -> Value
-createUnary (Unop uno una) = VUnary (createNTN (createUnop uno))
+createUnary (Unop uno una) = VUnary (Node TNone (createUnop uno))
                                     (createNTN (createUnary una))
 createUnary (UPostfix p) = VUnary (createNTN (createPostfix p))
                                   createEmptyNode
@@ -90,7 +97,7 @@ createUnary (UPostfix p) = VUnary (createNTN (createPostfix p))
 
 createExpr :: Expr -> Value
 createExpr (Expr u bu) = VExpr (createNTN (createUnary u))
-                               (zip (fmap (createNTN . createBinop . fst) bu)
+                               (zip (fmap (Node TNone . createBinop . fst) bu)
                                     (fmap (createNTN . createUnary . snd) bu))
 
 -- create For Expr
