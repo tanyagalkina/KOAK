@@ -11,7 +11,9 @@ data Node = Node Type Value
     deriving (Show, Eq)
 
 data Type = TUndefine
+    | TError String
     | TNone
+    | TVoid
     | TDouble
     | TInteger
     | TFunc [Type]
@@ -39,6 +41,7 @@ data Value =
   | VLiteral Node
   | VBinop Binop
   | VUnop Unop
+  | VError String
   | VNothing
     deriving (Show, Eq)
 

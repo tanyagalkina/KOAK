@@ -83,12 +83,12 @@ testCreateLiteral = do
 
 testCreateIdentifier :: Spec
 testCreateIdentifier = do
-    it "createIdentifier \"Patrick\"" $ do
-        createIdentifier "Patrick" `shouldBe` VIdentifier "Patrick"
-    it "createIdentifier \"zaCh18\"" $ do
-        createIdentifier "zaCh18" `shouldBe` VIdentifier "zaCh18"
-    it "createIdentifier \"a\"" $ do
-        createIdentifier "a" `shouldBe` VIdentifier "a"
+    it "createId \"Patrick\"" $ do
+        createId "Patrick" `shouldBe` VIdentifier "Patrick"
+    it "createId \"zaCh18\"" $ do
+        createId "zaCh18" `shouldBe` VIdentifier "zaCh18"
+    it "createId \"a\"" $ do
+        createId "a" `shouldBe` VIdentifier "a"
 
 testCreatePrimary :: Spec
 testCreatePrimary = do

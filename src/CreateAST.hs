@@ -4,6 +4,8 @@ module CreateAST where
 -- Import
 
 import Control.Applicative
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 import Parser
 
@@ -13,7 +15,7 @@ import ParseCode
 -- create AST / EDITABLE
 
 createAST :: Parser AST
-createAST = createNTN . createStmt <$> parseStmt
+createAST = createNTN . createStmt Map.empty <$> parseStmt
 
 -- create Basic Nodes
 
@@ -57,118 +59,183 @@ createLiteral (LDouble d) =
 createLiteralNode :: Value -> Node
 createLiteralNode v@(VLiteral (Node TInteger _)) = Node TInteger v
 createLiteralNode v@(VLiteral (Node TDouble _)) = Node TDouble v
-createLiteralNode v = Error "Typing of literal failed"
+createLiteralNode _ = Error "Typing of Literal failed"
 
 -- create Identifier
 
-createIdentifier :: Identifier -> Value
-createIdentifier = VIdentifier
+createId :: Identifier -> Value
+createId = VIdentifier
+
+createIdNode :: Map Identifier Type -> Value -> Node
+createIdNode map v@(VIdentifier s) =
+    case Map.lookup s map of
+        (Just t) -> Node t v
+        Nothing  -> Node TNone v
+createIdNode _ _ = Error "Typing of Identifier failed"
 
 -- create Primary
 
-createPrimary :: Primary -> Value
-createPrimary (PId i) = VPrimary (createNTN (createIdentifier i))
-createPrimary (PLit l) = VPrimary (createLiteralNode (createLiteral l))
-createPrimary (PExprs es) = VPrimary (createNTN (createExprs es))
+createPrimary :: Map Identifier Type -> Primary -> Value
+createPrimary map (PId i) =
+    VPrimary (createIdNode map (createId i))
+createPrimary _ (PLit l) = VPrimary (createLiteralNode (createLiteral l))
+createPrimary map (PExprs es) = VPrimary (createNTN (createExprs map es))
+
+createPrimaryNode :: Value -> Node
+createPrimaryNode p@(VPrimary (Node t _)) = Node t p
+createPrimaryNode _ = Error "Typing of Primary failed"
 
 -- create Call Expr
 
-createCallExpr :: CallExpr -> Value
-createCallExpr [] = VCallExpr [createEmptyNode]
-createCallExpr e = VCallExpr (fmap (createNTN . createExpr) e)
+createCallExpr :: Map Identifier Type -> CallExpr -> Value
+createCallExpr _ [] = VCallExpr [createEmptyNode]
+createCallExpr map e = VCallExpr (fmap (createNTN . createExpr map) e)
 
 -- create Postfix
 
-createPostfix :: Postfix -> Value
-createPostfix (Postfix p Nothing) = VPostfix (createNTN (createPrimary p))
-                                             createEmptyNode
-createPostfix (Postfix p (Just c)) = VPostfix (createNTN (createPrimary p))
-                                              (createNTN (createCallExpr c))
+createPostfix :: Map Identifier Type -> Postfix -> Value
+createPostfix map (Postfix p Nothing) =
+    VPostfix (createPrimaryNode (createPrimary map p))
+             createEmptyNode
+createPostfix map (Postfix p (Just c)) =
+        case primaryNode of
+            (Node t@(TFunc _) _) -> VPostfix primaryNode
+                                             (Node t (createCallExpr map c))
+            _ -> VError "Typing of Postfix failed"
+    where
+        primaryNode = createPrimaryNode (createPrimary map p)
 
 -- create Unary
 
-createUnary :: Unary -> Value
-createUnary (Unop uno una) = VUnary (Node TNone (createUnop uno))
-                                    (createNTN (createUnary una))
-createUnary (UPostfix p) = VUnary (createNTN (createPostfix p))
+createUnary :: Map Identifier Type -> Unary -> Value
+createUnary map (Unop uno una) = VUnary (Node TNone (createUnop uno))
+                                    (createNTN (createUnary map una))
+createUnary map (UPostfix p) = VUnary (createNTN (createPostfix map p))
                                   createEmptyNode
 
 -- create Expr
 
-createExpr :: Expr -> Value
-createExpr (Expr u bu) = VExpr (createNTN (createUnary u))
-                               (zip (fmap (Node TNone . createBinop . fst) bu)
-                                    (fmap (createNTN . createUnary . snd) bu))
+createExpr :: Map Identifier Type -> Expr -> Value
+createExpr map (Expr u bu) =
+    VExpr (createNTN (createUnary map u))
+          (zip (fmap (Node TNone . createBinop . fst) bu)
+               (fmap (createNTN . createUnary map . snd) bu))
 
 -- create For Expr
 
-createForExpr :: ForExpr -> Value
-createForExpr (ForExpr (i1, e1) (i2, e2) e es) =
-    VForExpr (createNTN (createIdentifier i1), createNTN (createExpr e1))
-             (createNTN (createIdentifier i2), createNTN (createExpr e2))
-             (createNTN (createExpr e))
-             (createNTN (createExprs es))
+createForExpr :: Map Identifier Type -> ForExpr -> Value
+createForExpr map (ForExpr (i1, e1) (i2, e2) e es) =
+    VForExpr (createNTN (createId i1), createNTN (createExpr map e1))
+             (createNTN (createId i2), createNTN (createExpr map e2))
+             (createNTN (createExpr map e))
+             (createNTN (createExprs map es))
 
 -- create If Expr
 
-createIfExpr :: IfExpr -> Value
-createIfExpr (IfExpr e es Nothing) =
-    VIfExpr (createNTN (createExpr e))
-            (createNTN (createExprs es))
+createIfExpr :: Map Identifier Type -> IfExpr -> Value
+createIfExpr map (IfExpr e es Nothing) =
+    VIfExpr (createNTN (createExpr map e))
+            (createNTN (createExprs map es))
             createEmptyNode
-createIfExpr (IfExpr e es1 (Just es2)) =
-    VIfExpr (createNTN (createExpr e))
-            (createNTN (createExprs es1))
-            (createNTN (createExprs es2))
+createIfExpr map (IfExpr e es1 (Just es2)) =
+    VIfExpr (createNTN (createExpr map e))
+            (createNTN (createExprs map es1))
+            (createNTN (createExprs map es2))
 
 -- create While Expr
 
-createWhileExpr :: WhileExpr -> Value
-createWhileExpr (WhileExpr e es) =
-    VWhileExpr (createNTN (createExpr e))
-               (createNTN (createExprs es))
+createWhileExpr :: Map Identifier Type -> WhileExpr -> Value
+createWhileExpr map (WhileExpr e es) =
+    VWhileExpr (createNTN (createExpr map e))
+               (createNTN (createExprs map es))
 
 -- create Exprs
 
-createExprs :: Exprs -> Value
-createExprs (EForExpr f) = VExprs [createNTN (createForExpr f)]
-createExprs (EWhileExpr w) = VExprs [createNTN (createWhileExpr w)]
-createExprs (EIfExpr i) = VExprs [createNTN (createIfExpr i)]
-createExprs (EExpr e) = VExprs (fmap (createNTN . createExpr) e)
+createExprs :: Map Identifier Type -> Exprs -> Value
+createExprs map (EForExpr f) = VExprs [createNTN (createForExpr map f)]
+createExprs map (EWhileExpr w) = VExprs [createNTN (createWhileExpr map w)]
+createExprs map (EIfExpr i) = VExprs [createNTN (createIfExpr map i)]
+createExprs map (EExpr e) = VExprs (fmap (createNTN . createExpr map) e)
 
 -- create Args Type
 
 createArgsType :: ArgsType -> Value
 createArgsType = VArgsType
 
+createArgsTypeNode :: Value -> Node
+createArgsTypeNode v@(VArgsType Int) = Node TInteger v
+createArgsTypeNode v@(VArgsType Double) = Node TDouble v
+createArgsTypeNode v@(VArgsType Void) = Node TVoid v
+createArgsTypeNode _ = Error "Typing of Args Type failed"
+
 -- create Prototype Args
 
 createPrototypeArgs :: PrototypeArgs -> Value
 createPrototypeArgs (PrototypeArgs ia a) =
-    VPrototypeArgs (zip (fmap (createNTN . createIdentifier . fst) ia)
-                        (fmap (createNTN . createArgsType . snd) ia))
-                   (createNTN (createArgsType a))
+    VPrototypeArgs
+        (fmap (\(i, a) ->
+                let argsTypeNode = createArgsTypeNode (createArgsType a)
+                in (Node (getNodeType argsTypeNode) (createId i), argsTypeNode))
+              ia)
+        (createArgsTypeNode (createArgsType a))
+
+createPrototypeArgsNode :: Value -> Node
+createPrototypeArgsNode v@(VPrototypeArgs args return) =
+    case turnListOfTypeInFunc (fmap snd args ++ [return]) of
+        TError s -> Error s
+        t -> Node t v
+createPrototypeArgsNode _ = Error "Typing of Prototype Args failed"
 
 -- create Prototype
 
 createPrototype :: Prototype -> Value
 createPrototype (Prototype i pa) =
-    VPrototype (createNTN (createIdentifier i))
-               (createNTN (createPrototypeArgs pa))
+    VPrototype (Node (getNodeType protoArgsNode) (createId i))
+               protoArgsNode
+    where
+        protoArgsNode = createPrototypeArgsNode (createPrototypeArgs pa)
+
+createPrototypeNode :: Value -> Node
+createPrototypeNode v@(VPrototype (Node t _) _) = Node t v
+createPrototypeNode _ = Error "Typing of Prototype failed"
 
 -- create Defs
 
-createDefs :: Defs -> Value
-createDefs (Defs p es) = VDefs (createNTN (createPrototype p))
-                               (createNTN (createExprs es))
+createDefs :: Map Identifier Type -> Defs -> Value
+createDefs map (Defs p es) = VDefs (createPrototypeNode (createPrototype p))
+                                   (createNTN (createExprs map es))
 
 -- create Kdefs
 
-createKdefs :: Kdefs -> Value
-createKdefs (KDefs d) = VKdefs (createNTN (createDefs d))
-createKdefs (KExprs es) = VKdefs (createNTN (createExprs es))
+createKdefs :: Map Identifier Type -> Kdefs -> Value
+createKdefs map (KDefs d) = VKdefs (createNTN (createDefs map d))
+createKdefs map (KExprs es) = VKdefs (createNTN (createExprs map es))
 
 -- create Stmt
 
-createStmt :: Stmt -> Value
-createStmt k = VStmt (fmap (createNTN . createKdefs) k)
+createStmt :: Map Identifier Type -> Stmt -> Value
+createStmt map k = VStmt (fmap (createNTN . createKdefs map) k)
+
+-- turn list of type into function type
+
+turnListOfTypeInFunc :: [Node] -> Type
+turnListOfTypeInFunc [] = TFunc []
+turnListOfTypeInFunc ((Node t (VArgsType _)):xs) =
+    if t `elem` [TInteger, TDouble, TVoid]
+    then addTypeToList t (turnListOfTypeInFunc xs)
+    else TError "Typing of Prototype Args failed"
+turnListOfTypeInFunc (_:xs) = TError "Typing of Prototype Args failed"
+
+addTypeToList :: Type -> Type -> Type
+addTypeToList t rest = case rest of
+    TFunc list -> TFunc (t : list)
+    TInteger -> TFunc [t, TInteger]
+    TDouble  -> TFunc [t, TDouble]
+    TVoid -> TFunc [t, TVoid]
+    _ -> TError "Typing of Prototype Args failed"
+
+-- get Node Type
+
+getNodeType :: Node -> Type 
+getNodeType (Node t _) = t
+getNodeType (Error s) = TError s
