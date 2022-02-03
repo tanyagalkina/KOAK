@@ -1,5 +1,8 @@
 module Data where
 
+import Data.Map (Map)
+import qualified Data.Map as Map
+
 -- FOR BETTER SHOW
 -- import Text.Pretty.Simple (pPrint)
 -- pPrint $ ...
@@ -44,6 +47,8 @@ data Value =
   | VError String
   | VNothing
     deriving (Show, Eq)
+
+type TypedId = Map Identifier Type
 
 -- kdefs* #eof
 type Stmt = [Kdefs]
