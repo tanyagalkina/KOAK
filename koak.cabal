@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3b9f84c76ea072c532ffec337aabd866d046167a675b4e1370cdb2e864279323
+-- hash: 7cb4c0ee9f74fd132d77762085db3df71a1f4814a50e1c19e323ea997f173223
 
 name:           koak
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
   exposed-modules:
       Data
       Lib
+      LLVMFunc
       MyLLVM
       MySndLLVM
       Parser
