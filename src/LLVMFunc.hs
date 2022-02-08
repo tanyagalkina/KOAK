@@ -3,7 +3,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wall #-}
-module Main where
+module LLVMFunc where
 
 import Control.Monad.Except
 import qualified Data.ByteString.Char8 as BS
@@ -109,100 +109,8 @@ import LLVM.CodeModel as C
 import LLVM.Prelude (traverse_)
 import qualified LLVM.AST as LLVM
 
-
-int :: Type
-int = IntegerType 32
-
--- if' :: Operand -> IRBuilder a -> IRBuilder ()
--- if' cond instr = mdo
---     condBr cond ifBlock end
-
---     ifBlock <- block `named` "if.start"
---     instr
---     br end
-
---     end <- block `named` "if.end"
---     pure ()
-
--- myAdd :: Operand -> Operand  -> IRBuilder Operand
--- myAdd a b = mdo
---     br addBlock
-
---     addBlock <- block `named` "add.start"
---     res <- fadd a b
---     return res
-
-
--- defAdd :: Definition
--- defAdd = GlobalDefinition functionDefaults
---   { LLVM.AST.Global.name = Name "add"
---   , parameters =
---       ( [ Parameter int (Name "a") []
---         , Parameter int (Name "b") [] ]
---       , False )
---   , returnType = int
---   , basicBlocks = [body]
---   }
---   where
---     body = BasicBlock
---         (Name "entry")
---         [ Name "result" :=
---             Add False  -- no signed wrap
---                 False  -- no unsigned wrap
---                 (LocalReference int (Name "a"))
---                 (LocalReference int (Name "b"))
---                 []]
---         (Do $ Ret (Just (LocalReference int (Name "result"))) [])
-
-
--- module_ :: AST.Module
--- module_ = defaultModule
---   { moduleName = "basic"
---   , moduleDefinitions = [defAdd]
---   }
-
-
--- toLLVM :: AST.Module -> IO ()
--- toLLVM mod = withContext $ \ctx -> do
---   llvm <- withModuleFromAST ctx mod moduleLLVMAssembly
---   BS.putStrLn llvm
-
-
-data CompilerState = CompilerState {
-  val :: Int,
-  x :: Int
-}
-
-type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
-
-toLLVM' :: Int -> IO ()
-toLLVM' instr = do
-  let mod = buildModule "mymod" $ compileModule' instr
-
-  withContext $ \ctx -> do
-    withModuleFromAST ctx mod $ \mod' -> do
-      let opt = None
-      withHostTargetMachine R.PIC C.Default opt $ \tm -> do
-        writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod'
-        writeObjectToFile tm (LLVM.Module.File "my.o") mod'
-
-compileModule' :: Int -> ModuleBuilder ()
-compileModule' instr = do
-  let state = CompilerState 1 0
-  _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[argc, argv] -> do
-    res <- runReaderT (compileInstrs instr) state
-    ret res
-  pure ()
-
-compileInstrs ::Int -> Codegen Operand
--- compileInstrs instr = traverse_ compInstr where
-compileInstrs instr = case instr of
-    0 -> myAdd'
-    1 -> myAdd'
-
--- myAdd :: Codegen Operand -> Codegen Operand  -> Codegen ()
-myAdd :: Operand -> Operand  -> Codegen Operand
-myAdd a' b' = mdo
+addToLLVM :: Operand -> Operand  -> Codegen Operand
+addToLLVM a' b' = mdo
     -- a' <- a
     -- b' <- b
     br addBlock
@@ -211,13 +119,12 @@ myAdd a' b' = mdo
     res <- fadd (int32 42) (int32 42)
     return res
 
-myAdd' :: Codegen Operand
-myAdd' = mdo
-    br doBlock
+subbToLLVM :: Operand -> Operand  -> Codegen Operand
+subbToLLVM a' b' = mdo
+    -- a' <- a
+    -- b' <- b
+    br subBlock
 
-    doBlock <- block `named` "act.start"
-    return (int32 42)
-
-
-main :: IO ()
-main = toLLVM' 0
+    subBlock <- block `named` "sub.start"
+    res <- fadd (int32 42) (int32 42)
+    return res
