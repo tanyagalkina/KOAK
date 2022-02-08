@@ -138,28 +138,28 @@ while' cond instr = mdo
 
 -- for (int i = 0; i < 10; i++) {...}
 
-for' :: Operand                         -- start value
-    -> (Operand -> IRBuilder Operand)   -- condition check
-    -> (Operand -> IRBuilder Operand)   -- loop action (i++)
-    -> (Operand -> IRBuilder a)         -- body instruction
-    -> iRBuilder ()
-for' val cond act instr = mdo
-    start <- currentBlock
-    br begin
+-- for' :: Operand                         -- start value
+--     -> (Operand -> IRBuilder Operand)   -- condition check
+--     -> (Operand -> IRBuilder Operand)   -- loop action (i++)
+--     -> (Operand -> IRBuilder a)         -- body instruction
+--     -> iRBuilder ()
+-- for' val cond act instr = mdo
+--     start <- currentBlock
+--     br begin
 
-    begin <- block `named` "for.begin"
-    loopVal <- phi [(val, start), (updatedVal, bodyEnd)]
-    res <- cond loopVal
-    condBr res bodyStart end
+--     begin <- block `named` "for.begin"=
+--     loopVal <- phi [(val, start), (updatedVal, bodyEnd)]
+--     res <- cond loopVal
+--     condBr res bodyStart end
 
-    bodyStart <- block `named` "for.body"
-    _ <- instr loopVal
-    updatedVal <- act loopVal
-    bodyEnd <- currentBlock
-    br begin
+--     bodyStart <- block `named` "for.body"
+--     _ <- instr loopVal
+--     updatedVal <- act loopVal
+--     bodyEnd <- currentBlock
+--     br begin
 
-    end <- block `named` "for.end"
-    pure ()
+--     end <- block `named` "for.end"
+--     pure ()
 
 -- data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
 
