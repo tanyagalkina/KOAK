@@ -34,6 +34,7 @@ library
       LLVMFunc
       MyLLVM
       MySndLLVM
+      ToLLVM
       Parser
   other-modules:
       Paths_koak

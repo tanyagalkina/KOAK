@@ -123,7 +123,7 @@ type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
 
 valueToLLVM :: Value -> Codegen Operand
 valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
-valueToLLVM (VDoubleConst v) = return (Const.double v)
+valueToLLVM (VDoubleConst v) = return  (Const.double v)
 valueToLLVM _ = error "Unknown type"
 
 binopToLLVM :: Value -> Codegen Operand
