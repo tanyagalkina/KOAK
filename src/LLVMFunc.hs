@@ -109,22 +109,46 @@ import LLVM.CodeModel as C
 import LLVM.Prelude (traverse_)
 import qualified LLVM.AST as LLVM
 
-addToLLVM :: Operand -> Operand  -> Codegen Operand
-addToLLVM a' b' = mdo
-    -- a' <- a
-    -- b' <- b
+import LLVM.IRBuilder.Constant as Const
+------------------
+import Data (Value (..), Binop (..))
+
+-- Where store info to get through out theAST
+data CompilerState = CompilerState {
+  val :: Int,
+  x :: Int
+}
+
+type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
+
+valueToLLVM :: Value -> Codegen Operand
+valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
+valueToLLVM (VDoubleConst v) = return (Const.double v)
+valueToLLVM _ = error "Unknown type"
+
+binopToLLVM :: Value -> Codegen Operand
+binopToLLVM (VBinop Data.Add) = addToLLVM (VDecimalConst 42) (VDecimalConst 42)
+binopToLLVM (VBinop Data.Sub) = subToLLVM (VDecimalConst 42) (VDecimalConst 42)
+binopToLLVM _ = error "Unknown Binop"
+
+(VExpr )
+
+addToLLVM :: Value -> Value -> Codegen Operand
+addToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
     br addBlock
 
     addBlock <- block `named` "add.start"
     res <- fadd (int32 42) (int32 42)
     return res
 
-subbToLLVM :: Operand -> Operand  -> Codegen Operand
-subbToLLVM a' b' = mdo
-    -- a' <- a
-    -- b' <- b
+subToLLVM :: Value -> Value  -> Codegen Operand
+subToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
     br subBlock
 
     subBlock <- block `named` "sub.start"
-    res <- fadd (int32 42) (int32 42)
+    res <- fsub (int32 42) (int32 42)
     return res
