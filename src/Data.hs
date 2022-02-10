@@ -1,5 +1,8 @@
 module Data where
 
+import Data.Map (Map)
+import qualified Data.Map as Map
+
 -- FOR BETTER SHOW
 -- import Text.Pretty.Simple (pPrint)
 -- pPrint $ ...
@@ -7,12 +10,16 @@ module Data where
 type AST = Node
 
 data Node = Node Type Value
+    | Error String
     deriving (Show, Eq)
 
 data Type = TUndefine
+    | TError String
     | TNone
-    | TDouble Type
-    | TInteger Type
+    | TVoid
+    | TDouble
+    | TInteger
+    | TFunc [Type]
     deriving (Show, Eq)
 
 data Value =
@@ -37,8 +44,11 @@ data Value =
   | VLiteral Node
   | VBinop Binop
   | VUnop Unop
+  | VError String
   | VNothing
     deriving (Show, Eq)
+
+type TypedId = Map Identifier Type
 
 -- kdefs* #eof
 type Stmt = [Kdefs]
@@ -51,8 +61,6 @@ data Kdefs = KDefs Defs
 -- prototype expressions
 data Defs = Defs Prototype Exprs
     deriving (Show, Eq)
-
--- ADD UNARY / BINARY IN PROTOTYPE
 
 --  ( 'unary' . decimal_const ? | 'binary' . decimal_const ? ) identifier prototype_args
 data Prototype = Prototype Identifier PrototypeArgs
@@ -84,8 +92,6 @@ data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
 -- 'while' expression 'do' expressions
 data WhileExpr = WhileExpr Expr Exprs
     deriving (Show, Eq)
-
--- UNARY OR EXPRESSION -> ONE TO REMOVE / SAME
 
 -- unary (# binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]

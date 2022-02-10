@@ -47,6 +47,7 @@ library
     , llvm-hs-pretty
     , llvm-hs-pure
     , mtl
+    , containers
   default-language: Haskell2010
 
 executable koak-exe
@@ -85,4 +86,5 @@ test-suite koak-test
     , llvm-hs-pretty
     , llvm-hs-pure
     , mtl
+    , containers
   default-language: Haskell2010
