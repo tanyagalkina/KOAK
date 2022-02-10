@@ -62,8 +62,6 @@ data Kdefs = KDefs Defs
 data Defs = Defs Prototype Exprs
     deriving (Show, Eq)
 
--- ADD UNARY / BINARY IN PROTOTYPE
-
 --  ( 'unary' . decimal_const ? | 'binary' . decimal_const ? ) identifier prototype_args
 data Prototype = Prototype Identifier PrototypeArgs
     deriving (Show, Eq)
@@ -94,8 +92,6 @@ data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
 -- 'while' expression 'do' expressions
 data WhileExpr = WhileExpr Expr Exprs
     deriving (Show, Eq)
-
--- UNARY OR EXPRESSION -> ONE TO REMOVE / SAME
 
 -- unary (# binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
