@@ -153,6 +153,10 @@ data CompilerState = CompilerState {
 
 type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
 
+type BinopFct = Operand -> Operand -> Codegen Operand
+type CondFct = Sicmp.IntegerPredicate
+
+
 astToVal :: AST -> Value
 astToVal (Node _ v) = v
 
@@ -179,65 +183,37 @@ vExprToLLVM _ = error "Unkown type"
 {-
   Operator -> Value 1 -> Value 2 -> result
 -}
-
--- binopToLLVM (VBinop Data.Add) = addToLLVM (VDecimalConst 42) (VDecimalConst 42)
--- binopToLLVM (VBinop Data.Sub) = subToLLVM (VDecimalConst 42) (VDecimalConst 42)
--- binopToLLVM _ = error "Unknown Binop"
 binopToLLVM :: AST -> AST -> AST -> Codegen Operand
 binopToLLVM op v v' = case astToVal op of
-  (VBinop Data.Add) -> addToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop Data.Sub) -> subToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop Data.Mul) -> mulToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop Data.Div) -> divToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Gt) -> gtToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Lt) -> ltToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Eq) -> eqToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Neq) -> neqToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop op) -> opToLLVM op (nodeToVal v) (nodeToVal v')
 
-
-
-{-
-  get to value and return it as llvm
--}
-
-addToLLVM :: Value -> Value -> Codegen Operand
-addToLLVM a b = mdo
+opToLLVM :: Binop -> Value -> Value -> Codegen Operand
+opToLLVM op a b = mdo
     a' <- valueToLLVM a
     b' <- valueToLLVM b
     br addBlock
 
     addBlock <- block `named` "add.start"
-    res <- add a' b'
+    res <- (fct op) a' b'
     return res
+    where
+      fct Data.Add = add
+      fct Data.Sub = sub
+      fct Data.Mul = mul
+      fct Data.Div = sdiv
 
-subToLLVM :: Value -> Value  -> Codegen Operand
-subToLLVM a b = mdo
+condToLLVM :: BinopFct -> Value -> Value -> Codegen Operand
+condToLLVM fct a b = mdo
     a' <- valueToLLVM a
     b' <- valueToLLVM b
-    br subBlock
+    br addBlock
 
-    subBlock <- block `named` "sub.start"
-    res <- sub a' b'
-    return res
-
-mulToLLVM :: Value -> Value  -> Codegen Operand
-mulToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
-    br subBlock
-
-    subBlock <- block `named` "sub.start"
-    res <- mul a' b'
-    return res
-
-divToLLVM :: Value -> Value  -> Codegen Operand
-divToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
-    br subBlock
-
-    subBlock <- block `named` "sub.start"
-    res <- sdiv a' b'
+    addBlock <- block `named` "add.start"
+    res <- fct a' b'
     return res
 
 gtToLLVM :: Value -> Value  -> Codegen Operand
