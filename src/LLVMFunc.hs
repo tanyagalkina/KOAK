@@ -154,6 +154,7 @@ vExprToLLVM _ = error "Unkown type"
 binopToLLVM :: AST -> AST -> AST -> Codegen Operand
 binopToLLVM op v v' = case astToVal op of
   (VBinop Data.Add) -> addToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Sub) -> subToLLVM (nodeToVal v) (nodeToVal v')
 
 
 
@@ -178,7 +179,7 @@ subToLLVM a b = mdo
     br subBlock
 
     subBlock <- block `named` "sub.start"
-    res <- fsub (int32 42) (int32 42)
+    res <- sub a' b'
     return res
 
 nodeToVal :: Node -> Value
