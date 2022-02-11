@@ -155,6 +155,7 @@ binopToLLVM :: AST -> AST -> AST -> Codegen Operand
 binopToLLVM op v v' = case astToVal op of
   (VBinop Data.Add) -> addToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Sub) -> subToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Mul) -> mulToLLVM (nodeToVal v) (nodeToVal v')
 
 
 
@@ -181,6 +182,18 @@ subToLLVM a b = mdo
     subBlock <- block `named` "sub.start"
     res <- sub a' b'
     return res
+
+mulToLLVM :: Value -> Value  -> Codegen Operand
+mulToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
+    br subBlock
+
+    subBlock <- block `named` "sub.start"
+    res <- mul a' b'
+    return res
+
+
 
 nodeToVal :: Node -> Value
 nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
