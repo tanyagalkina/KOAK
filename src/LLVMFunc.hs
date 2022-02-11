@@ -190,6 +190,9 @@ binopToLLVM op v v' = case astToVal op of
   (VBinop Data.Mul) -> mulToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Div) -> divToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Gt) -> gtToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Lt) -> ltToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Eq) -> eqToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Neq) -> neqToLLVM (nodeToVal v) (nodeToVal v')
 
 
 
@@ -247,6 +250,35 @@ gtToLLVM a b = mdo
     res <- icmp Sicmp.SGT a' b'
     return res
 
+ltToLLVM :: Value -> Value  -> Codegen Operand
+ltToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
+    br subBlock
+
+    subBlock <- block `named` "sub.start"
+    res <- icmp Sicmp.SLT a' b'
+    return res
+
+eqToLLVM :: Value -> Value  -> Codegen Operand
+eqToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
+    br subBlock
+
+    subBlock <- block `named` "sub.start"
+    res <- icmp Sicmp.EQ  a' b'
+    return res
+
+neqToLLVM :: Value -> Value  -> Codegen Operand
+neqToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
+    br subBlock
+
+    subBlock <- block `named` "sub.start"
+    res <- icmp Sicmp.NE a' b'
+    return res
 
 
 nodeToVal :: Node -> Value
