@@ -110,8 +110,40 @@ import LLVM.Prelude (traverse_)
 import qualified LLVM.AST as LLVM
 
 import LLVM.IRBuilder.Constant as Const
+
+
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.String
+import Foreign.Ptr
+import qualified LLVM.AST as AST
+import LLVM.AST.AddrSpace
+import LLVM.AST.Constant
+import LLVM.AST.Float
+import LLVM.AST.FloatingPointPredicate hiding (False, True)
+import qualified LLVM.AST.IntegerPredicate as Sicmp
+import LLVM.AST.Operand as Op
+import LLVM.AST.Type as Type
+import LLVM.IRBuilder as IRB
+import LLVM.Module
+import LLVM.PassManager
+import LLVM.Pretty
+import LLVM.Target
+import System.IO
+import System.IO.Error
+import Data.Int
+import Data.Word
+import Control.Monad.Trans
+import Control.Monad.Except
+import Control.Monad.Fix
+import LLVM.Target
+import LLVM.CodeModel
+import Numeric
+
+
 ------------------
 import Data (Value (..), Binop (..), Type (..), AST, Node (..))
+-- import Sicmp.IntegerPredicate
 
 -- Where store info to get through out theAST
 data CompilerState = CompilerState {
@@ -157,6 +189,7 @@ binopToLLVM op v v' = case astToVal op of
   (VBinop Data.Sub) -> subToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Mul) -> mulToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Div) -> divToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Gt) -> gtToLLVM (nodeToVal v) (nodeToVal v')
 
 
 
@@ -203,6 +236,17 @@ divToLLVM a b = mdo
     subBlock <- block `named` "sub.start"
     res <- sdiv a' b'
     return res
+
+gtToLLVM :: Value -> Value  -> Codegen Operand
+gtToLLVM a b = mdo
+    a' <- valueToLLVM a
+    b' <- valueToLLVM b
+    br subBlock
+
+    subBlock <- block `named` "sub.start"
+    res <- icmp Sicmp.SGT a' b'
+    return res
+
 
 
 nodeToVal :: Node -> Value
