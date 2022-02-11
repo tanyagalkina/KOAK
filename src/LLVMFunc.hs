@@ -111,7 +111,7 @@ import qualified LLVM.AST as LLVM
 
 import LLVM.IRBuilder.Constant as Const
 ------------------
-import Data (Value (..), Binop (..))
+import Data (Value (..), Binop (..), Type (..), AST, Node (..))
 
 -- Where store info to get through out theAST
 data CompilerState = CompilerState {
@@ -121,16 +121,45 @@ data CompilerState = CompilerState {
 
 type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
 
+astToVal :: AST -> Value
+astToVal (Node _ v) = v
+
+astToType :: AST -> Data.Type
+astToType (Node t _) = t
+
 valueToLLVM :: Value -> Codegen Operand
 valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
-valueToLLVM (VDoubleConst v) = return  (Const.double v)
+-- valueToLLVM (VDoubleConst v) = return  (Const.double v)
+-- valueToLLVM (VDecimalConst v) = pure $ ConstantOperand (Float (LLVM.AST.Float.Double (fromIntegral v)))
+valueToLLVM (VDoubleConst v) = pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
 valueToLLVM _ = error "Unknown type"
 
-binopToLLVM :: Value -> Codegen Operand
-binopToLLVM (VBinop Data.Add) = addToLLVM (VDecimalConst 42) (VDecimalConst 42)
-binopToLLVM (VBinop Data.Sub) = subToLLVM (VDecimalConst 42) (VDecimalConst 42)
-binopToLLVM _ = error "Unknown Binop"
+{-
+  process our Ast for VExpr
+-}
 
+vExprToLLVM :: Node -> Codegen Operand
+vExprToLLVM (Node _ (VExpr v ((op, v'):xs))) = binopToLLVM op v v'
+vExprToLLVM (Node _ (VExpr v [(op, v')])) =binopToLLVM op v v'
+vExprToLLVM _ = error "Unkown type"
+
+
+{-
+  Operator -> Value 1 -> Value 2 -> result
+-}
+
+-- binopToLLVM (VBinop Data.Add) = addToLLVM (VDecimalConst 42) (VDecimalConst 42)
+-- binopToLLVM (VBinop Data.Sub) = subToLLVM (VDecimalConst 42) (VDecimalConst 42)
+-- binopToLLVM _ = error "Unknown Binop"
+binopToLLVM :: AST -> AST -> AST -> Codegen Operand
+binopToLLVM op v v' = case astToVal op of
+  (VBinop Data.Add) -> addToLLVM (nodeToVal v) (nodeToVal v')
+
+
+
+{-
+  get to value and return it as llvm
+-}
 
 addToLLVM :: Value -> Value -> Codegen Operand
 addToLLVM a b = mdo
@@ -139,7 +168,7 @@ addToLLVM a b = mdo
     br addBlock
 
     addBlock <- block `named` "add.start"
-    res <- fadd (int32 42) (int32 42)
+    res <- add a' b'
     return res
 
 subToLLVM :: Value -> Value  -> Codegen Operand
@@ -151,3 +180,11 @@ subToLLVM a b = mdo
     subBlock <- block `named` "sub.start"
     res <- fsub (int32 42) (int32 42)
     return res
+
+nodeToVal :: Node -> Value
+nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
+nodeToVal _ = error "error: node to value"
+
+-- Node (TError "fromList []") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Add),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])])))])
+-- Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
+-- (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
