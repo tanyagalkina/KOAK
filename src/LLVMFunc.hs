@@ -292,6 +292,7 @@ neqToLLVM a b = mdo
 
 unaryToLLVM :: Node -> Codegen Operand
 unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) val')) = minusToLLVM (nodeToVal val')
+unaryToLLVM (Node _ (VUnary post (Node TNone VNothing))) = postfixToLLVM post
 unaryToLLVM _ = error "Unknown type"
 
 minusToLLVM :: Value -> Codegen Operand
