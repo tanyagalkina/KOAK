@@ -178,6 +178,19 @@ valueToLLVM (VDoubleConst v) = pure $ ConstantOperand (Float (LLVM.AST.Float.Dou
 valueToLLVM _ = error "Unknown type"
 
 
+litToLLVM :: Node -> Codegen Operand
+litToLLVM (Node TInteger v) = valueToLLVM v
+litToLLVM (Node TDouble  v) = valueToLLVM v
+litToLLVM _ = error "Unknown type"
+
+
+primaryToLLVM :: Node -> Codegen Operand
+primaryToLLVM (Node _ (VLiteral v)) = litToLLVM v
+primaryToLLVM _ = error "Unkown type"
+
+postfixToLLVM :: Node -> Codegen Operand
+postfixToLLVM (Node _ (VPrimary v)) = primaryToLLVM v
+postfixToLLVM _ = error "Unkown Type"
 
 {-
   process our Ast for VExpr
