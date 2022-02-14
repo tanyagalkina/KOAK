@@ -25,7 +25,7 @@ import LLVM.Relocation
 import LLVM.Target
 import Prelude hiding (mod)
 
-import Data (ArgsType (Int, Double, Void))
+import Data (ArgsType (Int, Double, Void), Unop (Minus))
 
 
 import LLVM.AST
@@ -153,11 +153,22 @@ data CompilerState = CompilerState {
 
 type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
 
+type BinopFct = Operand -> Operand -> Codegen Operand
+type CondFct = Sicmp.IntegerPredicate
+
+
 astToVal :: AST -> Value
 astToVal (Node _ v) = v
 
 astToType :: AST -> Data.Type
 astToType (Node t _) = t
+
+
+nodeToVal :: Node -> Value
+nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
+nodeToVal _ = error "error: node to value"
+
+
 
 valueToLLVM :: Value -> Codegen Operand
 valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
@@ -166,78 +177,56 @@ valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
 valueToLLVM (VDoubleConst v) = pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
 valueToLLVM _ = error "Unknown type"
 
+
+
 {-
   process our Ast for VExpr
 -}
 
 vExprToLLVM :: Node -> Codegen Operand
 vExprToLLVM (Node _ (VExpr v ((op, v'):xs))) = binopToLLVM op v v'
-vExprToLLVM (Node _ (VExpr v [(op, v')])) =binopToLLVM op v v'
+vExprToLLVM (Node _ (VExpr v [(op, v')])) = binopToLLVM op v v'
+vExprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
 vExprToLLVM _ = error "Unkown type"
 
+
+-------- BINOP
 
 {-
   Operator -> Value 1 -> Value 2 -> result
 -}
-
--- binopToLLVM (VBinop Data.Add) = addToLLVM (VDecimalConst 42) (VDecimalConst 42)
--- binopToLLVM (VBinop Data.Sub) = subToLLVM (VDecimalConst 42) (VDecimalConst 42)
--- binopToLLVM _ = error "Unknown Binop"
 binopToLLVM :: AST -> AST -> AST -> Codegen Operand
 binopToLLVM op v v' = case astToVal op of
-  (VBinop Data.Add) -> addToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop Data.Sub) -> subToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop Data.Mul) -> mulToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop Data.Div) -> divToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Gt) -> gtToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Lt) -> ltToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Eq) -> eqToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Neq) -> neqToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop op') -> opToLLVM op' (nodeToVal v) (nodeToVal v')
+  _ -> error "Unknown Type"
 
-
-
-{-
-  get to value and return it as llvm
--}
-
-addToLLVM :: Value -> Value -> Codegen Operand
-addToLLVM a b = mdo
+opToLLVM :: Binop -> Value -> Value -> Codegen Operand
+opToLLVM op a b = mdo
     a' <- valueToLLVM a
     b' <- valueToLLVM b
     br addBlock
 
     addBlock <- block `named` "add.start"
-    res <- add a' b'
+    res <- (fct op) a' b'
     return res
+    where
+      fct Data.Add = add
+      fct Data.Sub = sub
+      fct Data.Mul = mul
+      fct Data.Div = sdiv
 
-subToLLVM :: Value -> Value  -> Codegen Operand
-subToLLVM a b = mdo
+condToLLVM :: BinopFct -> Value -> Value -> Codegen Operand
+condToLLVM fct a b = mdo
     a' <- valueToLLVM a
     b' <- valueToLLVM b
-    br subBlock
+    br addBlock
 
-    subBlock <- block `named` "sub.start"
-    res <- sub a' b'
-    return res
-
-mulToLLVM :: Value -> Value  -> Codegen Operand
-mulToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
-    br subBlock
-
-    subBlock <- block `named` "sub.start"
-    res <- mul a' b'
-    return res
-
-divToLLVM :: Value -> Value  -> Codegen Operand
-divToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
-    br subBlock
-
-    subBlock <- block `named` "sub.start"
-    res <- sdiv a' b'
+    addBlock <- block `named` "add.start"
+    res <- fct a' b'
     return res
 
 gtToLLVM :: Value -> Value  -> Codegen Operand
@@ -280,11 +269,24 @@ neqToLLVM a b = mdo
     res <- icmp Sicmp.NE a' b'
     return res
 
-
-nodeToVal :: Node -> Value
-nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
-nodeToVal _ = error "error: node to value"
-
 -- Node (TError "fromList []") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Add),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])])))])
 -- Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
 -- (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
+
+
+
+------- UNOP
+
+unaryToLLVM :: Node -> Codegen Operand
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) val')) = minusToLLVM (nodeToVal val')
+unaryToLLVM _ = error "Unknown type"
+
+minusToLLVM :: Value -> Codegen Operand
+minusToLLVM v = mdo
+    res <- opToLLVM Data.Mul v (VDecimalConst $ -1)
+    return res
+
+
+-- Node (TError "fromList []") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])])))])
+-- (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])])
+-- (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])
