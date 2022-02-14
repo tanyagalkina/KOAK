@@ -25,7 +25,7 @@ import LLVM.Relocation
 import LLVM.Target
 import Prelude hiding (mod)
 
-import Data (ArgsType (Int, Double, Void))
+import Data (ArgsType (Int, Double, Void), Unop (Minus))
 
 
 import LLVM.AST
@@ -163,6 +163,13 @@ astToVal (Node _ v) = v
 astToType :: AST -> Data.Type
 astToType (Node t _) = t
 
+
+nodeToVal :: Node -> Value
+nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
+nodeToVal _ = error "error: node to value"
+
+
+
 valueToLLVM :: Value -> Codegen Operand
 valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
 -- valueToLLVM (VDoubleConst v) = return  (Const.double v)
@@ -170,15 +177,20 @@ valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
 valueToLLVM (VDoubleConst v) = pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
 valueToLLVM _ = error "Unknown type"
 
+
+
 {-
   process our Ast for VExpr
 -}
 
 vExprToLLVM :: Node -> Codegen Operand
 vExprToLLVM (Node _ (VExpr v ((op, v'):xs))) = binopToLLVM op v v'
-vExprToLLVM (Node _ (VExpr v [(op, v')])) =binopToLLVM op v v'
+vExprToLLVM (Node _ (VExpr v [(op, v')])) = binopToLLVM op v v'
+vExprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
 vExprToLLVM _ = error "Unkown type"
 
+
+-------- BINOP
 
 {-
   Operator -> Value 1 -> Value 2 -> result
@@ -189,7 +201,8 @@ binopToLLVM op v v' = case astToVal op of
   (VBinop Data.Lt) -> ltToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Eq) -> eqToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Neq) -> neqToLLVM (nodeToVal v) (nodeToVal v')
-  (VBinop op) -> opToLLVM op (nodeToVal v) (nodeToVal v')
+  (VBinop op') -> opToLLVM op' (nodeToVal v) (nodeToVal v')
+  _ -> error "Unknown Type"
 
 opToLLVM :: Binop -> Value -> Value -> Codegen Operand
 opToLLVM op a b = mdo
@@ -256,11 +269,24 @@ neqToLLVM a b = mdo
     res <- icmp Sicmp.NE a' b'
     return res
 
-
-nodeToVal :: Node -> Value
-nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
-nodeToVal _ = error "error: node to value"
-
 -- Node (TError "fromList []") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Add),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])])))])
 -- Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
 -- (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
+
+
+
+------- UNOP
+
+unaryToLLVM :: Node -> Codegen Operand
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) val')) = minusToLLVM (nodeToVal val')
+unaryToLLVM _ = error "Unknown type"
+
+minusToLLVM :: Value -> Codegen Operand
+minusToLLVM v = mdo
+    res <- opToLLVM Data.Mul v (VDecimalConst $ -1)
+    return res
+
+
+-- Node (TError "fromList []") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])])))])
+-- (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])])
+-- (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])
