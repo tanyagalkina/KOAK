@@ -15,8 +15,8 @@ jobs :
         uses : actions/checkout@v2
       - name: Permissions bug workaround
         run: "chown -R $(id -un):$(id -gn) ~"
-      - name: install llvm
-        run: sudo apt-get install llvm-9-dev
+      - name: Install llvm
+        run: sudo apt-get install -y llvm-9-dev
       - name : Run unit test
         run : stack test --allow-different-user --coverage > unit_test_output
       - name : Upload file
