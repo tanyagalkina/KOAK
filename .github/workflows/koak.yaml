@@ -13,7 +13,7 @@ jobs :
       - name : Checkout repo
         uses : actions/checkout@v2
       - name: Permissions bug workaround
-        run: "chown -R $(id -un):$(id -gn) ~"
+        run: sudo chown -R $(id -un):$(id -gn) ~
       - name: Install llvm
         run: |
           sudo apt-get update -qq
