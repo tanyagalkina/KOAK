@@ -16,7 +16,7 @@ jobs :
       - name: Permissions bug workaround
         run: "chown -R $(id -un):$(id -gn) ~"
       - name: Install llvm
-        run: sudo apt-get install -y llvm-9-dev
+        run: sudo dnf install llvm9*
       - name : Run unit test
         run : stack test --allow-different-user --coverage > unit_test_output
       - name : Upload file
