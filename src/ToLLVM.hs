@@ -28,8 +28,11 @@ import Control.Monad.Reader (ReaderT (runReaderT))
 import LLVM.IRBuilder.Module
 import LLVM.Relocation as R
 import LLVM.CodeModel as C
+import Debug.Trace
+import Control.Monad.Trans
 
 import LLVMFunc as F
+import System.Process
 import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..))
 
 data CompilerState = CompilerState {
@@ -41,14 +44,17 @@ type Codegen = ReaderT F.CompilerState (IRBuilderT ModuleBuilder)
 
 astToLLVM :: AST -> IO ()
 astToLLVM instr = do
-  let mod = buildModule "mymod" $ compileModule' instr
+  let mod = traceShow ("TOLLVM HAS GOT::\n", instr) buildModule "mymod" $ compileModule' instr
 
   withContext $ \ctx ->
     withModuleFromAST ctx mod $ \mod' -> do
     let opt = None
     withHostTargetMachine R.PIC C.Default opt $ \tm -> do
-      writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod'
-      writeObjectToFile tm (LLVM.Module.File "my.o") mod'
+      
+      writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod' -- generates an IR file
+      writeObjectToFile tm (LLVM.Module.File "my.o") mod' -- builds an object file
+      callCommand "clang my.ll -o my.bc"    -- builds a binary
+      
 
 compileModule' :: AST -> ModuleBuilder ()
 compileModule' instr = do
@@ -64,4 +70,5 @@ compileInstrs instr = case instr of
     (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
     n@(Data.Node _ v@(VExpr _ _)) -> F.vExprToLLVM n
-    _ -> error "Unknown val"
+    -- _ -> error "Unknown val"
+    _ -> F.valueToLLVM (VDecimalConst 42)
