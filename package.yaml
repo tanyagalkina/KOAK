@@ -26,6 +26,7 @@ dependencies:
 - llvm-hs-pretty
 - bytestring
 - mtl
+- process
 
 library:
   source-dirs: src

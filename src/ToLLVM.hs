@@ -26,23 +26,29 @@ import Control.Monad.Reader (ReaderT (runReaderT))
 import LLVM.IRBuilder.Module
 import LLVM.Relocation as R
 import LLVM.CodeModel as C
+import Debug.Trace
+import Control.Monad.Trans
 
 import LLVMFunc as F
 import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..), Codegen)
 import qualified Control.Applicative()
 import qualified Data.IntMap()
 import qualified Data.Map as Map
+import System.Process
 
 astToLLVM :: AST -> IO ()
 astToLLVM instr = do
-  let mod = buildModule "mymod" $ compileModule' instr
-
-  withContext $ \ctx ->
-    withModuleFromAST ctx mod $ \mod' -> do
-    let opt = None
-    withHostTargetMachine R.PIC C.Default opt $ \tm -> do
-      writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod'
-      writeObjectToFile tm (LLVM.Module.File "my.o") mod'
+    let mod = buildModule "mymod" $ compileModule' instr
+    withContext $ \ctx ->
+        withModuleFromAST ctx mod $ \mod' -> do
+        let opt = None
+        withHostTargetMachine R.PIC C.Default opt $ \tm -> do
+            writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod' -- generates an IR file
+            writeObjectToFile tm (LLVM.Module.File "my.o") mod' -- builds an object file
+            callCommand "gcc my.o"
+            callCommand "./a.out"
+            callCommand "echo $?"
+      
 
 compileModule' :: AST -> ModuleBuilder ()
 compileModule' instr = do
