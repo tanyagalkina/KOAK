@@ -24,7 +24,7 @@ import LLVM.Relocation
 import LLVM.Target
 import Prelude hiding (mod)
 
-import Data (ArgsType (Int, Double, Void))
+import Data (ArgsType (Int, Double, Void), Codegen)
 
 
 import Control.Monad
@@ -81,9 +81,9 @@ import qualified Data.Map as Map
 -- typeToLType Int = LType.i32
 -- typeToLType _ = error "Unkown type"
 
-type AssignedValues = Map.Map String Operand
+-- type AssignedValues = Map.Map String Operand
 
-type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
+-- type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
 
 
 load' :: Operand -> Codegen Operand

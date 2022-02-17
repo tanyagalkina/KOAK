@@ -140,13 +140,12 @@ import LLVM.Target
 import LLVM.CodeModel
 import Numeric
 
-
 ------------------
-import Data (Value (..), Binop (..), Type (..), AST, Node (..))
+import Data (Value (..), Binop (..), Type (..), AST, Node (..), Codegen)
 import qualified Data.Map as Map
-import MyLLVM (store', load')
+import MyLLVM (store', load',)
 -- import Sicmp.IntegerPredicate
-
+import Control.Monad.Reader
 
 
 astToVal :: AST -> Value
@@ -176,8 +175,18 @@ litToLLVM (Node TDouble  v) = valueToLLVM v
 litToLLVM _ = error "Unknown type"
 
 
+loadIdentifier :: String -> Codegen Operand
+loadIdentifier name = do
+                    variables <- ask
+                    case variables Map.!? name of
+                        Just v -> do
+                                -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
+                                load' v
+                        Nothing -> valueToLLVM (VDecimalConst 42)
+
 primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VLiteral v)) = litToLLVM v
+primaryToLLVM (Node _ (VIdentifier name)) = loadIdentifier name
 primaryToLLVM _ = error "Unkown type"
 
 postfixToLLVM :: Node -> Codegen Operand
@@ -285,16 +294,15 @@ neqToLLVM a b = mdo
 -- [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Assign),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])]
 
 assignToLLVM :: Value -> Value  -> Codegen Operand
--- assignToLLVM (VIdentifier varName) varValue = mdo
---     val <- valueToLLVM varValue
---     br assignBlock
+assignToLLVM (VIdentifier varName) varValue = mdo
+    val <- valueToLLVM varValue
+    br assignBlock
 
---     assignBlock <- block `named` "assign.start"
---     ptr <- alloca Type.i32 (Just (Type.int32 1)) 0 `named` (fromString varName)
---     store' ptr val
---     let tmp = Map.insert varName ptr
---     res <- load' ptr
---     return res
+    assignBlock <- block `named` "assign.start"
+    ptr <- alloca Type.i32 (Just (Type.int32 1)) 0 `named` (fromString varName)
+    store' ptr val
+    let tmp = Map.insert varName ptr
+    load' ptr
 assignToLLVM _ _ = error "Unknown type"
 
 
