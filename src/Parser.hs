@@ -64,6 +64,12 @@ parseSome p = (:) <$> p <*> parseMany p
 parseSomeOut :: Parser a -> Parser [a]
 parseSomeOut p = (\x xs -> []) <$> p <*> parseMany p
 
+parseEnd :: Parser Char
+parseEnd = Parser $ \case
+                        [] -> Just ('e', "")
+                        s -> Nothing
+                        
+
 -- Numeric Parser
 
 parseTuple :: Parser a -> Parser (a,a)

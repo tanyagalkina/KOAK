@@ -98,7 +98,7 @@ data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
 data WhileExpr = WhileExpr Expr Exprs
     deriving (Show, Eq)
 
--- unary (# binop ( unary ) )*
+-- unary (#binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
     deriving (Show, Eq)
 
@@ -112,6 +112,8 @@ data Postfix = Postfix Primary (Maybe CallExpr)
 
 -- '(' ( expression (',' expression ) *) ? ')'
 type CallExpr = [Expr]
+
+-- EXPR OU EXPRS
 
 -- identifier | literal | '(' expressions ')'
 data Primary = PId Identifier

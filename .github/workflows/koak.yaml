@@ -4,19 +4,19 @@ on :
     branches :
       - master
       - main
-      - dev
 
 jobs :
   unit-test :
-    runs-on : ubuntu-20.04
-    container : epitechcontent/epitest-docker
+    runs-on : ubuntu-latest
     steps :
       - name : Checkout repo
         uses : actions/checkout@v2
       - name: Permissions bug workaround
-        run: "chown -R $(id -un):$(id -gn) ~"
-      - name: install llvm
-        run: sudo apt-get install llvm-9-dev
+        run: sudo chown -R $(id -un):$(id -gn) ~
+      - name: Install llvm
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y llvm-9-dev
       - name : Run unit test
         run : stack test --allow-different-user --coverage > unit_test_output
       - name : Upload file
