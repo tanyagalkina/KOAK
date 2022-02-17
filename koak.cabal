@@ -35,6 +35,7 @@ library
       MyLLVM
       ToLLVM
       Parser
+      SrcManager
   other-modules:
       Paths_koak
   hs-source-dirs:
