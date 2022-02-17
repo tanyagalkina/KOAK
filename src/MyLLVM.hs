@@ -62,6 +62,8 @@ import qualified Data.Ix as Type
 import qualified LLVM.IRBuilder as Type
 import Data.ByteString.Builder.Prim (condB)
 import Text.ParserCombinators.ReadP (endBy)
+import Control.Monad.Reader
+import qualified Data.Map as Map
 
 
 
@@ -79,13 +81,18 @@ import Text.ParserCombinators.ReadP (endBy)
 -- typeToLType Int = LType.i32
 -- typeToLType _ = error "Unkown type"
 
-load' :: Operand -> IRBuilder Operand
+type AssignedValues = Map.Map String Operand
+
+type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
+
+
+load' :: Operand -> Codegen Operand
 load' adr = load adr 0
 
-store' :: Operand -> Operand -> IRBuilder ()
+store' :: Operand -> Operand -> Codegen ()
 store' adr val = store adr 0 val
 
-allocate :: Type -> Operand -> IRBuilder Operand
+allocate :: Type -> Operand -> Codegen Operand
 allocate ty val = do
     adr <- alloca ty (Just (Type.int32 1)) 0
     store' adr val

@@ -25,7 +25,7 @@ import LLVM.Relocation
 import LLVM.Target
 import Prelude hiding (mod)
 
-import Data (ArgsType (Int, Double, Void), Unop (Minus))
+import Data (ArgsType (Int, Double, Void), Unop (Minus), Codegen, BinopFct)
 
 
 import LLVM.AST
@@ -143,18 +143,10 @@ import Numeric
 
 ------------------
 import Data (Value (..), Binop (..), Type (..), AST, Node (..))
+import qualified Data.Map as Map
+import MyLLVM (store', load')
 -- import Sicmp.IntegerPredicate
 
--- Where store info to get through out theAST
-data CompilerState = CompilerState {
-  val :: Int,
-  x :: Int
-}
-
-type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
-
-type BinopFct = Operand -> Operand -> Codegen Operand
-type CondFct = Sicmp.IntegerPredicate
 
 
 astToVal :: AST -> Value
@@ -214,6 +206,7 @@ binopToLLVM op v v' = case astToVal op of
   (VBinop Data.Lt) -> ltToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Eq) -> eqToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop Data.Neq) -> neqToLLVM (nodeToVal v) (nodeToVal v')
+  (VBinop Data.Assign) -> assignToLLVM (nodeToVal v) (nodeToVal v')
   (VBinop op') -> opToLLVM op' (nodeToVal v) (nodeToVal v')
   _ -> error "Unknown Type"
 
@@ -286,7 +279,34 @@ neqToLLVM a b = mdo
 -- Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
 -- (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))
 
+-- ASSIGN
 
+-- Node (TError "fromList [(\"i\",TInteger)]") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Assign),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])])))])
+-- [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Assign),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])]
+
+assignToLLVM :: Value -> Value  -> Codegen Operand
+-- assignToLLVM (VIdentifier varName) varValue = mdo
+--     val <- valueToLLVM varValue
+--     br assignBlock
+
+--     assignBlock <- block `named` "assign.start"
+--     ptr <- alloca Type.i32 (Just (Type.int32 1)) 0 `named` (fromString varName)
+--     store' ptr val
+--     let tmp = Map.insert varName ptr
+--     res <- load' ptr
+--     return res
+assignToLLVM _ _ = error "Unknown type"
+
+
+-- fromAssignToLLVM :: Expr -> ReaderT Binds (IRBuilderT ModuleBuilder) Operand
+-- fromAssignToLLVM (Assign (Var nameS _) xpr xtype)    = do
+--                                                 let Type = exprTypeToType xtype
+--                                                 val <- fromExprsToLLVM [xpr]
+--                                                 ptr <- alloca Type (Just $ ConstantOperand (Int 128 4)) (8 :: Word32) `named` (fromString nameS)
+--                                                 let tmp = Map.insert nameS ptr
+--                                                 store ptr 8 val
+--                                                 retn <- load ptr 8
+--                                                 return retn
 
 ------- UNOP
 
@@ -304,3 +324,8 @@ minusToLLVM v = mdo
 -- Node (TError "fromList []") (VStmt [Node TNone (VKdefs (Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])])))])
 -- (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])])
 -- (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])
+
+---- LOGICAL GATES
+
+-- whileToLLVM :: Value -> Codegen Operand
+-- whileToLLVM v = undefined

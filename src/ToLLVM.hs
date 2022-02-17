@@ -30,14 +30,7 @@ import LLVM.Relocation as R
 import LLVM.CodeModel as C
 
 import LLVMFunc as F
-import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..))
-
-data CompilerState = CompilerState {
-  val :: Int,
-  x :: Int
-}
-
-type Codegen = ReaderT F.CompilerState (IRBuilderT ModuleBuilder)
+import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..), Codegen, CompilerState (CompilerState))
 
 astToLLVM :: AST -> IO ()
 astToLLVM instr = do
@@ -52,13 +45,13 @@ astToLLVM instr = do
 
 compileModule' :: AST -> ModuleBuilder ()
 compileModule' instr = do
-  let state = F.CompilerState 1 0
+  let state = CompilerState 1 0
   _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[argc, argv] -> do
     res <- runReaderT (compileInstrs instr) state
     ret res
   pure ()
 
-compileInstrs :: AST -> F.Codegen Operand
+compileInstrs :: AST -> Codegen Operand
 -- compileInstrs instr = traverse_ compInstr where
 compileInstrs instr = case instr of
     (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
