@@ -15,8 +15,10 @@ import ParseCode
 -- create AST / EDITABLE
 
 createAST :: Parser AST
-createAST = (\ast -> let (stmt, _) = createStmt Map.empty ast
-                     in  checkError (Node TNone stmt)) <$> parseStmt
+createAST = (\ast -> let (stmt, ti) = createStmt Map.empty ast
+                     in  if Map.member "" ti
+                         then Error "Two identifier are identical"
+                         else checkError (Node TNone stmt)) <$> parseStmt
 
 -- check Error
 
@@ -254,7 +256,7 @@ applyTypeToSubNode ti t node = case node of
         (Node _ (VPrimary n)) -> let (newN, newTi) = applyTypeToSubNode ti t n
                                   in (Node t (VPrimary newN), newTi)
         (Node _ (VIdentifier i))
-            -> (Node t (VIdentifier i), Map.insert i t ti)
+            -> (Node t (VIdentifier i), addNewTypedId i t ti)
         n -> (n, ti)
 
 applyTypeToTwoSubNode :: TypedId -> Type -> Node -> Node -> Node
@@ -286,10 +288,10 @@ createForExpr ti (ForExpr (i1, e1) (i2, e2) e es) =
         (expr1, newTi1) = createExpr ti e1
         exprNode1 = createExprNode expr1
         (expr2, newTi2) =
-            createExpr (Map.insert i1 (getNodeType exprNode1) newTi1) e2
+            createExpr (addNewTypedId i1 (getNodeType exprNode1) newTi1) e2
         exprNode2 = createExprNode expr2
         (expr, newTi) =
-            createExpr (Map.insert i1 (getNodeType exprNode1) newTi2) e
+            createExpr (addNewTypedId i1 (getNodeType exprNode1) newTi2) e
         (exprs, newTi3) = createExprs newTi es
 
 createForExprNode :: Value -> Node
@@ -411,7 +413,7 @@ createPrototypeNode _ = Error "Typing of Prototype failed"
 
 addArgsToTypedId :: TypedId -> [(Node, Node)] -> TypedId
 addArgsToTypedId ti ((Node t (VIdentifier i), _):args) =
-    addArgsToTypedId (Map.insert i t ti) args
+    addArgsToTypedId (addNewTypedId i t ti) args
 addArgsToTypedId ti [] = ti
 addArgsToTypedId _ _ = Map.empty
 
@@ -421,9 +423,11 @@ createDefs :: TypedId -> Defs -> Value
 createDefs ti (Defs p es) = VDefs prototypeNode
                                   (createExprsNode exprs)
     where
-        (prototype, newTi1) = createPrototype ti p
+        (prototype@(VPrototype (Node _ (VIdentifier i)) _),
+         newTi1) = createPrototype ti p
         prototypeNode = createPrototypeNode prototype
-        (exprs, _) = createExprs newTi1 es
+        (exprs, _) =
+            createExprs (addNewTypedId i (getNodeType prototypeNode) newTi1) es
 
 createDefsNode :: Value -> Node
 createDefsNode v@(VDefs (Node t _) _) = Node t v
@@ -433,7 +437,7 @@ createDefsNode _ = Error "Typing of Defs failed"
 
 createKdefs :: TypedId -> Kdefs -> (Value, TypedId)
 createKdefs ti (KDefs d) =
-        (VKdefs defsNode, Map.insert i (getNodeType defsNode) ti)
+        (VKdefs defsNode, addNewTypedId i (getNodeType defsNode) ti)
     where
         defs@(VDefs (Node _ (VPrototype (Node _ (VIdentifier i)) _)) _) =
             createDefs ti d
@@ -487,3 +491,11 @@ getExprType (t:ts) = let restType = getExprType ts
                         then t
                         else TError "Typing of Expr failed"
 getExprType [] = TError "Typing of Expr failed"
+
+-- add new Typed Id
+
+addNewTypedId :: Identifier -> Type -> TypedId -> TypedId
+addNewTypedId i t ti =
+    if Map.member i ti
+    then Map.fromList [("", TError "Two identifier are identical")]
+    else Map.insert i t ti

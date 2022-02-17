@@ -1,0 +1,5 @@
+def func():double 12.0;
+
+def func2(val : double):double 11.0 + val;
+
+func() + func2(7.0);

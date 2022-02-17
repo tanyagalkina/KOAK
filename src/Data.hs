@@ -108,6 +108,8 @@ data Postfix = Postfix Primary (Maybe CallExpr)
 -- '(' ( expression (',' expression ) *) ? ')'
 type CallExpr = [Expr]
 
+-- EXPR OU EXPRS
+
 -- identifier | literal | '(' expressions ')'
 data Primary = PId Identifier
     | PLit Literal
