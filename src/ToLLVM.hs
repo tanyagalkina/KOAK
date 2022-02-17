@@ -49,7 +49,7 @@ compileModule' instr = do
   let state = Map.fromList [("test", int32 0)]
   _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
     res <- runReaderT (compileInstrs instr) state
-    pure ()
+    ret res
   pure ()
 
 compileInstrs :: AST -> Codegen Operand
