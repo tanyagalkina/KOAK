@@ -57,5 +57,5 @@ compileInstrs :: AST -> Codegen Operand
 compileInstrs instr = case instr of
     (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
-    n@(Data.Node _ (VExpr _ _)) -> F.vExprToLLVM n
+    n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
     _ -> error "Unknown val"
