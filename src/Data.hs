@@ -2,6 +2,11 @@ module Data where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified LLVM.AST.IntegerPredicate as Sicmp
+import LLVM.AST
+import LLVM.AST.Type as LType
+import LLVM.IRBuilder
+import Control.Monad.Reader
 
 -- FOR BETTER SHOW
 -- import Text.Pretty.Simple (pPrint)
@@ -9,7 +14,7 @@ import qualified Data.Map as Map
 
 type AST = Node
 
-data Node = Node Type Value
+data Node = Node Data.Type Value
     | Error String
     deriving (Show, Eq)
 
@@ -19,7 +24,7 @@ data Type = TUndefine
     | TVoid
     | TDouble
     | TInteger
-    | TFunc [Type]
+    | TFunc [Data.Type]
     deriving (Show, Eq)
 
 data Value =
@@ -48,7 +53,7 @@ data Value =
   | VNothing
     deriving (Show, Eq)
 
-type TypedId = Map Identifier Type
+type TypedId = Map Identifier Data.Type
 
 -- kdefs* #eof
 type Stmt = [Kdefs]
@@ -126,9 +131,23 @@ type DoubleConst = Double
 --  decimal_const | double_const
 data Literal = LInt DecimalConst | LDouble DoubleConst
     deriving (Show, Eq)
-    
+
 data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
     deriving (Show, Eq)
 
 data Unop = Not | Minus
     deriving (Show, Eq)
+
+-- LLVM Data
+-- Where store info to get through out theAST
+data CompilerState = CompilerState {
+  val :: Int,
+  x :: Int
+}
+
+type AssignedValues = Map String Operand
+
+type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
+
+type BinopFct = Operand -> Operand -> Codegen Operand
+type CondFct = Sicmp.IntegerPredicate

@@ -4,67 +4,67 @@
 {-# OPTIONS_GHC -Wall #-}
 module MyLLVM where
 
-import Control.Monad.Except
-import qualified Data.ByteString.Char8 as BS
-import Data.IORef
-import Data.Int
--- import qualified Data.Map.Strict as Map
-import Foreign.Ptr
-import LLVM.AST
-import qualified LLVM.AST as AST
-import LLVM.AST.Constant
-import LLVM.AST.Global
-import LLVM.CodeGenOpt
-import LLVM.CodeModel
-import LLVM.Context
-import LLVM.Internal.OrcJIT.CompileLayer
-import LLVM.Module
-import LLVM.OrcJIT
-import LLVM.Relocation
-import LLVM.Target
-import Prelude hiding (mod)
+-- IMPORT LLVM
 
-import Data (ArgsType (Int, Double, Void))
-
-
-import Control.Monad
-import Control.Monad.IO.Class
-import Data.String
-import Foreign.Ptr
-import qualified LLVM.AST as AST
-import LLVM.AST.AddrSpace
-import LLVM.AST.Constant
-import LLVM.AST.Float
-import LLVM.AST.FloatingPointPredicate hiding (False, True)
-import qualified LLVM.AST.IntegerPredicate as Sicmp
-import LLVM.AST.Operand as Op
-import LLVM.AST.Type as Type
 import LLVM.IRBuilder as IRB
-import LLVM.Module
-import LLVM.PassManager
-import LLVM.Pretty
-import LLVM.Target
-import System.IO
-import System.IO.Error
-import Data.Int
-import Data.Word
-import Control.Monad.Trans
-import Control.Monad.Except
-import Control.Monad.Fix
-import LLVM.Target
-import LLVM.CodeModel
-import Numeric
+-- import LLVM.CodeGenOpt
+-- import LLVM.CodeModel
+-- import LLVM.Context
+-- import LLVM.Internal.OrcJIT.CompileLayer
+-- import LLVM.Module
+-- import LLVM.OrcJIT
+-- import LLVM.Relocation
+-- import LLVM.Target
+-- import LLVM.PassManager
+-- import LLVM.Pretty
 
+import LLVM.AST
+-- import LLVM.AST.Constant
+-- import LLVM.AST.Global
+-- import LLVM.AST.AddrSpace
+-- import LLVM.AST.Float
+-- import LLVM.AST.FloatingPointPredicate hiding (False, True)
+-- import qualified LLVM.AST.IntegerPredicate as Sicmp
+-- import LLVM.AST.Operand as Op
+-- import LLVM.AST.Type as Type
 
-import LLVM.IRBuilder (IRBuilder)
-import Control.Monad.List (ListT)
-import qualified Data.Ix as Type
-import qualified LLVM.IRBuilder as Type
-import Data.ByteString.Builder.Prim (condB)
-import Text.ParserCombinators.ReadP (endBy)
+-- IMPORT CONTROL.MONAD
 
+-- import Control.Monad.Reader
+-- import Control.Monad
+-- import Control.Monad.IO.Class
+-- import Control.Monad.Except
+-- import Control.Monad.Trans
+-- import Control.Monad.Fix
+-- import Control.Monad.List (ListT)
 
+-- IMPORT DATA
 
+import Data.String()
+-- import Data.IORef
+-- import Data.Int
+-- import qualified Data.ByteString.Char8 as BS
+-- import Data.Word
+-- import qualified Data.Ix as Type
+--import Data.ByteString.Builder.Prim (condB)
+
+-- IMPORT SYSTEM.IO
+
+-- import System.IO
+-- import System.IO.Error ()
+
+-- OTHER IMPORTS
+
+import qualified Data.Map as Map()
+import Prelude hiding (mod)
+-- import Foreign.Ptr
+-- import Data (ArgsType (Int, Double, Void))
+-- import Numeric
+-- import Text.ParserCombinators.ReadP (endBy)
+
+-- OUR IMPORTS
+
+import Data (Codegen)
 
 -- type Binds = Map.Map String Operand
 
@@ -79,15 +79,20 @@ import Text.ParserCombinators.ReadP (endBy)
 -- typeToLType Int = LType.i32
 -- typeToLType _ = error "Unkown type"
 
-load' :: Operand -> IRBuilder Operand
+-- type AssignedValues = Map.Map String Operand
+
+-- type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
+
+
+load' :: Operand -> Codegen Operand
 load' adr = load adr 0
 
-store' :: Operand -> Operand -> IRBuilder ()
-store' adr val = store adr 0 val
+store' :: Operand -> Operand -> Codegen ()
+store' adr = store adr 0
 
-allocate :: Type -> Operand -> IRBuilder Operand
+allocate :: LLVM.AST.Type -> Operand -> Codegen Operand
 allocate ty val = do
-    adr <- alloca ty (Just (Type.int32 1)) 0
+    adr <- alloca ty (Just (IRB.int32 1)) 0
     store' adr val
     pure adr
 
@@ -106,7 +111,7 @@ if' cond instr = mdo
     condBr cond ifBlock end
 
     ifBlock <- block `named` "if.start"
-    instr
+    _ <- instr
     br end
 
     end <- block `named` "if.end"
@@ -171,14 +176,6 @@ while' cond instr = mdo
 -- myBinop Mul = myMul
 
 -- Binop
-myAdd :: Operand -> Operand -> IRBuilder Operand
-myAdd a b = add a b
-
-mySub :: Operand -> Operand -> IRBuilder Operand
-mySub a b = sub a b
-
-myMul :: Operand -> Operand -> IRBuilder Operand
-myMul a b = mul a b
 
 -- myDiv :: Operand -> Operand -> IRBuilder Operand
 -- myDiv a b = div a b

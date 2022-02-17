@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use empty" #-}
 module ToLLVM where
 
-import Data.Int
 import LLVM.AST
 import LLVM.CodeGenOpt
 import LLVM.Context
@@ -11,12 +12,9 @@ import LLVM.Target
 import Prelude hiding (mod)
 
 
-import LLVM.IRBuilder.Instruction
+-- import LLVM.IRBuilder.Instruction
 
 ---------------
-
--- import qualified Data.Map.Strict as Map
-import Prelude hiding (mod)
 
 import LLVM.AST.Type as Type
 import LLVM.IRBuilder as IRB
@@ -30,14 +28,10 @@ import LLVM.Relocation as R
 import LLVM.CodeModel as C
 
 import LLVMFunc as F
-import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..))
-
-data CompilerState = CompilerState {
-  val :: Int,
-  x :: Int
-}
-
-type Codegen = ReaderT F.CompilerState (IRBuilderT ModuleBuilder)
+import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..), Codegen)
+import qualified Control.Applicative()
+import qualified Data.IntMap()
+import qualified Data.Map as Map
 
 astToLLVM :: AST -> IO ()
 astToLLVM instr = do
@@ -52,16 +46,16 @@ astToLLVM instr = do
 
 compileModule' :: AST -> ModuleBuilder ()
 compileModule' instr = do
-  let state = F.CompilerState 1 0
-  _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[argc, argv] -> do
+  let state = Map.fromList [("test", int32 0)]
+  _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
     res <- runReaderT (compileInstrs instr) state
-    ret res
+    pure ()
   pure ()
 
-compileInstrs :: AST -> F.Codegen Operand
+compileInstrs :: AST -> Codegen Operand
 -- compileInstrs instr = traverse_ compInstr where
 compileInstrs instr = case instr of
     (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
-    n@(Data.Node _ v@(VExpr _ _)) -> F.vExprToLLVM n
+    n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
     _ -> error "Unknown val"
