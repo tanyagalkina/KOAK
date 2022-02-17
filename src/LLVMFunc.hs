@@ -5,149 +5,74 @@
 {-# OPTIONS_GHC -Wall #-}
 module LLVMFunc where
 
-import Control.Monad.Except
-import qualified Data.ByteString.Char8 as BS
-import Data.IORef
-import Data.Int
--- import qualified Data.Map.Strict as Map
-import Foreign.Ptr
+-- IMPORT LLVM
+
+-- import LLVM.CodeGenOpt
+-- import LLVM.CodeModel
+-- import LLVM.Context
+-- import LLVM.Internal.OrcJIT.CompileLayer
+-- import LLVM.Module
+-- import LLVM.OrcJIT
+-- import LLVM.Relocation
+-- import LLVM.Target
+-- import LLVM.PassManager
+-- import LLVM.Pretty
+
 import LLVM.AST
-import qualified LLVM.AST as AST
+import LLVM.AST.Float
 import LLVM.AST.Constant
-import LLVM.AST.Global
-import LLVM.CodeGenOpt
-import LLVM.CodeModel
-import LLVM.Context
-import LLVM.Internal.OrcJIT.CompileLayer
-import LLVM.Module
-import LLVM.OrcJIT
-import LLVM.Relocation
-import LLVM.Target
-import Prelude hiding (mod)
+import qualified LLVM.AST.IntegerPredicate as Sicmp
+-- import LLVM.AST.Global
+-- import LLVM.AST.AddrSpace
+-- import LLVM.AST.FloatingPointPredicate hiding (False, True)
+-- import LLVM.AST.Operand as Op
+-- import LLVM.AST.Type as Type
 
-import Data (ArgsType (Int, Double, Void), Unop (Minus), Codegen, BinopFct)
+import LLVM.IRBuilder as IRB
+-- import LLVM.IRBuilder.Instruction
+-- import LLVM.IRBuilder.Module
+-- import LLVM.IRBuilder.Constant as Const
 
+-- import LLVM.Prelude (traverse)
 
-import LLVM.AST
-import qualified LLVM.AST as AST
-import LLVM.AST.Global
-import LLVM.Context
-import LLVM.Module
-
-import Control.Monad.Except
-import Data.ByteString.Char8 as BS
-import LLVM.IRBuilder (IRBuilder)
-import LLVM.IRBuilder.Instruction
-
----------------
-
-import Control.Monad.Except
-import qualified Data.ByteString.Char8 as BS
-import Data.IORef
-import Data.Int
--- import qualified Data.Map.Strict as Map
-import Foreign.Ptr
-import LLVM.AST
-import qualified LLVM.AST as AST
-import LLVM.AST.Constant
-import LLVM.AST.Global
-import LLVM.CodeGenOpt
-import LLVM.CodeModel
-import LLVM.Context
-import LLVM.Internal.OrcJIT.CompileLayer
-import LLVM.Module
-import LLVM.OrcJIT
-import LLVM.Relocation
-import LLVM.Target
-import Prelude hiding (mod)
-
-import Data (ArgsType (Int, Double, Void))
-
+-- IMPORT CONTROL.MONAD
 
 import Control.Monad
-import Control.Monad.IO.Class
-import Data.String
-import Foreign.Ptr
-import qualified LLVM.AST as AST
-import LLVM.AST.AddrSpace
-import LLVM.AST.Constant
-import LLVM.AST.Float
-import LLVM.AST.FloatingPointPredicate hiding (False, True)
-import qualified LLVM.AST.IntegerPredicate as Sicmp
-import LLVM.AST.Operand as Op
-import LLVM.AST.Type as Type
-import LLVM.IRBuilder as IRB
-import LLVM.Module
-import LLVM.PassManager
-import LLVM.Pretty
-import LLVM.Target
-import System.IO
-import System.IO.Error
-import Data.Int
-import Data.Word
-import Control.Monad.Trans
-import Control.Monad.Except
-import Control.Monad.Fix
-import LLVM.Target
-import LLVM.CodeModel
-import Numeric
+-- import Control.Monad.Except
+-- import Control.Monad.IO.Class
+-- import Control.Monad.Trans
+-- import Control.Monad.Fix
+-- import Control.Monad.List (ListT)
+-- import Control.Monad.Reader (ReaderT (runReaderT))
 
+-- IMPORT DATA
 
-import LLVM.IRBuilder (IRBuilder)
-import Control.Monad.List (ListT)
-import qualified Data.Ix as Type
-import qualified LLVM.IRBuilder as Type
-import Data.ByteString.Builder.Prim (condB)
-import Text.ParserCombinators.ReadP (endBy)
-import Control.Monad.Reader (ReaderT (runReaderT))
+-- import Data.IORef
+-- import Data.Int
+-- import Data.String
+-- import Data.Word
+-- import qualified Data.Ix as Type
 
+-- import qualified Data.ByteString.Char8 as BS
+-- import Data.ByteString.Builder.Prim (condB)
 
------------
-import LLVM.IRBuilder.Module
-import LLVM.Relocation as R
-import LLVM.CodeModel as C
-import LLVM.Prelude (traverse_)
-import qualified LLVM.AST as LLVM
+-- IMPORT SYSTEM..IO
 
-import LLVM.IRBuilder.Constant as Const
+-- import System.IO
+-- import System.IO.Error
 
+-- OTHER IMPORTS
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Data.String
-import Foreign.Ptr
-import qualified LLVM.AST as AST
-import LLVM.AST.AddrSpace
-import LLVM.AST.Constant
-import LLVM.AST.Float
-import LLVM.AST.FloatingPointPredicate hiding (False, True)
-import qualified LLVM.AST.IntegerPredicate as Sicmp
-import LLVM.AST.Operand as Op
-import LLVM.AST.Type as Type
-import LLVM.IRBuilder as IRB
-import LLVM.Module
-import LLVM.PassManager
-import LLVM.Pretty
-import LLVM.Target
-import System.IO
-import System.IO.Error
-import Data.Int
-import Data.Word
-import Control.Monad.Trans
-import Control.Monad.Except
-import Control.Monad.Fix
-import LLVM.Target
-import LLVM.CodeModel
-import Numeric
+-- import qualified Data.Map as Map
+-- import Foreign.Ptr
+import Prelude hiding (mod)
+-- import Numeric
+-- import Text.ParserCombinators.ReadP (endBy)
 
+-- OUT IMPORTS
 
-------------------
-import Data (Value (..), Binop (..), Type (..), AST, Node (..))
-import qualified Data.Map as Map
+import Data (Value (..), Binop (..), Type (..), AST, Node (..), Codegen, BinopFct, Unop (..))
 import MyLLVM (store', load')
--- import Sicmp.IntegerPredicate
-
-
 
 astToVal :: AST -> Value
 astToVal (Node _ v) = v

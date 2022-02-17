@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -Wall #-}
 module ToLLVM where
 
-import Data.Int
 import LLVM.AST
 import LLVM.CodeGenOpt
 import LLVM.Context
@@ -14,9 +13,6 @@ import Prelude hiding (mod)
 import LLVM.IRBuilder.Instruction
 
 ---------------
-
--- import qualified Data.Map.Strict as Map
-import Prelude hiding (mod)
 
 import LLVM.AST.Type as Type
 import LLVM.IRBuilder as IRB
@@ -46,7 +42,7 @@ astToLLVM instr = do
 compileModule' :: AST -> ModuleBuilder ()
 compileModule' instr = do
   let state = CompilerState 1 0
-  _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[argc, argv] -> do
+  _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
     res <- runReaderT (compileInstrs instr) state
     ret res
   pure ()
@@ -56,5 +52,5 @@ compileInstrs :: AST -> Codegen Operand
 compileInstrs instr = case instr of
     (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
-    n@(Data.Node _ v@(VExpr _ _)) -> F.vExprToLLVM n
+    n@(Data.Node _ (VExpr _ _)) -> F.vExprToLLVM n
     _ -> error "Unknown val"
