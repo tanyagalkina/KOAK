@@ -12,9 +12,12 @@ import Debug.Trace
 import Data.ByteString.Short
 import Parser
 import CreateAST
+import Control.Exception
 import qualified LLVM.AST as AST
 import System.Console.Haskeline
 import Control.Monad.Trans
+import System.Exit
+import Control.Monad (mfilter)
 
 -----------
 import ToLLVM (astToLLVM)
@@ -32,7 +35,7 @@ main = do
       -- [] -> putStrLn "You did not say anything!"
       -- [path] -> putStrLn path
       []      -> repl
-      [files] -> processFiles files >> return ()
+      files -> processFiles files >> return ()
 
 exampleExpr :: Node
 exampleExpr = Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 2)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])
@@ -52,16 +55,29 @@ process modo source = do
   case res of 
       Nothing -> print "SYNTAX ERROR" >> return initErrorModule
     --  Just ex -> print (head $ (fst ex)) >> return initErrorModule
-      Just expr -> putStrLn "AST LOOKS LIKE:" >>print  expr >> (astToLLVM $ exampleExpr) >> return initErrorModule -- replace this line by the previous 
+      Just expr -> putStrLn "AST LOOKS LIKE:" >> print  expr
+       >> (astToLLVM $ exampleExpr) >> return initErrorModule -- replace this line by the previous 
+
+
+replace :: Eq b => b -> b -> [b] -> [b]
+replace a b = map $ maybe b id . mfilter (/= a) . Just
+
+concatSources :: String -> [String] -> IO String
+concatSources base [] = return base
+concatSources base (x:xs) = do
+                     src <- readFile x
+                     let cleanSource = replace '\n' ' ' src
+                     concatSources (base ++ cleanSource) xs
 
 
 -- maybe add error handling ?
-processFiles :: String -> IO AST.Module
-processFiles fname = Prelude.readFile fname >>= process initModule
+processFiles :: [String] -> IO AST.Module
+-- processFiles fnames = Prelude.readFile (head fnames) >>= process initModule
+processFiles fnames = concatSources "" fnames >>= process initModule
 
 
 repl :: IO ()
-repl = traceShow 
+repl = traceShow
   ("KOAK Version 1.0.0\nCopyright 2021-2022 Epitech Roazhon, Inc." ) runInputT defaultSettings (loop initModule)
     where
     loop mod = do
