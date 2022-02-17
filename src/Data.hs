@@ -1,65 +1,134 @@
 module Data where
 
+import Data.Map (Map)
+import qualified Data.Map as Map
 
-Data AST = Node Type Value AST
-    | Empty
+-- FOR BETTER SHOW
+-- import Text.Pretty.Simple (pPrint)
+-- pPrint $ ...
 
-Data Type = None
-    | Double Type
-    | Integer Type
+type AST = Node
 
-Data Stmt = [Kdefs]
+data Node = Node Type Value
+    | Error String
+    deriving (Show, Eq)
 
-Data Kdefs = Defs Exprs
+data Type = TUndefine
+    | TError String
+    | TNone
+    | TVoid
+    | TDouble
+    | TInteger
+    | TFunc [Type]
+    deriving (Show, Eq)
 
-Data Defs = Prototype Exprs
+data Value =
+    VStmt [Node]
+  | VKdefs Node
+  | VDefs Node Node
+  | VPrototype Node Node
+  | VPrototypeArgs [(Node, Node)] Node
+  | VArgsType ArgsType
+  | VExprs [Node]
+  | VForExpr (Node, Node) (Node, Node) Node Node
+  | VIfExpr Node Node Node
+  | VWhileExpr Node Node
+  | VExpr Node [(Node, Node)]
+  | VUnary Node Node
+  | VPostfix Node Node
+  | VCallExpr [Node]
+  | VPrimary Node
+  | VIdentifier String
+  | VDecimalConst Int
+  | VDoubleConst Double
+  | VLiteral Node
+  | VBinop Binop
+  | VUnop Unop
+  | VError String
+  | VNothing
+    deriving (Show, Eq)
 
--- add Unary / Binary
-Data Prototype = Identifier PrototypeArgs
+type TypedId = Map Identifier Type
 
-data PrototypeArgs = [(Identifier, Type)] Type
+-- kdefs* #eof
+type Stmt = [Kdefs]
 
+-- 'def' defs ';' | expressions ';'
+data Kdefs = KDefs Defs
+    | KExprs Exprs
+    deriving (Show, Eq)
+
+-- prototype expressions
+data Defs = Defs Prototype Exprs
+    deriving (Show, Eq)
+
+--  ( 'unary' . decimal_const ? | 'binary' . decimal_const ? ) identifier prototype_args
+data Prototype = Prototype Identifier PrototypeArgs
+    deriving (Show, Eq)
+
+-- '(' ( identifier ':' type ','? ) * ')' ':' type
+data PrototypeArgs = PrototypeArgs [(Identifier, ArgsType)] ArgsType
+    deriving (Show, Eq)
+
+-- 'int' | 'double' | 'void'
 data ArgsType = Int | Double | Void
+    deriving (Show, Eq)
 
-Data Exprs = ForExpr
-    | WhileExpr
-    | IfExpr
-    | [Expr]
+-- for_expr | if_expr | while_expr | expression (':' expression )*
+data Exprs = EForExpr ForExpr
+    | EWhileExpr WhileExpr
+    | EIfExpr IfExpr
+    | EExpr [Expr]
+    deriving (Show, Eq)
 
-data ForExpr = (Identifier, Expr) (Identifier, Expr) Expr Exprs
+-- 'for' identifier '=' expression ',' identifier '<' expression ',' expression 'in' expressions
+data ForExpr = ForExpr (Identifier, Expr) (Identifier, Expr) Expr Exprs
+    deriving (Show, Eq)
 
-data IfExpr = Expr Exprs (Maybe Exprs)
+-- 'if' expression 'then' expressions ('else' expressions )?
+data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
+    deriving (Show, Eq)
 
-data WhileExpr = Expr Exprs
+-- 'while' expression 'do' expressions
+data WhileExpr = WhileExpr Expr Exprs
+    deriving (Show, Eq)
 
-Data Expr = Unary [(Binop, SubExpr)]
+-- unary (# binop ( unary ) )*
+data Expr = Expr Unary [(Binop, Unary)]
+    deriving (Show, Eq)
 
-Data Unary = Unop Unop Unary | Postfix Postfix
+-- # unop unary | postfix
+data Unary = Unop Unop Unary | UPostfix Postfix
+    deriving (Show, Eq)
 
-Data Postfix = Primary (Maybe CallExpr)
+-- primary call_expr?
+data Postfix = Postfix Primary (Maybe CallExpr)
+    deriving (Show, Eq)
 
-Data CallExpr = [Maybe Expr]
+-- '(' ( expression (',' expression ) *) ? ')'
+type CallExpr = [Expr]
 
-Data Primary = Id Identifier
-    | Lit Literal
-    | Exprs Exprs
+-- identifier | literal | '(' expressions ')'
+data Primary = PId Identifier
+    | PLit Literal
+    | PExprs Exprs
+    deriving (Show, Eq)
 
+-- [a - z A - Z][a - z A - Z 0 - 9]*
 type Identifier = String
 
--- Dot, Necessary ?
+-- [0 - 9]+
+type DecimalConst = Int
 
-Data DecimalConst = Int
+-- ( decimal_const dot [0 - 9]* | dot [0 - 9]+ )
+type DoubleConst = Double
 
-Data DoubleConst = Double
+--  decimal_const | double_const
+data Literal = LInt DecimalConst | LDouble DoubleConst
+    deriving (Show, Eq)
+    
+data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
+    deriving (Show, Eq)
 
-Data Literal = Int DecimalConst | Double DoubleConst
-
-Data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
-
-Data Unop = Not | Minus
-
-Data SubExpr =  Unary Unary | Expr Expr
-
-
-
-
+data Unop = Not | Minus
+    deriving (Show, Eq)
