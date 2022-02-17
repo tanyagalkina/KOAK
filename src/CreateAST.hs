@@ -15,13 +15,87 @@ import ParseCode
 -- create AST / EDITABLE
 
 createAST :: Parser AST
-createAST = (\s -> let (stmt, ti) = createStmt Map.empty s
-                   in  Node (TError (show ti)) stmt) <$> parseStmt
+createAST = (\s -> let (stmt, _) = createStmt Map.empty s
+                   in  checkError (Node TNone stmt)) <$> parseStmt
+
+-- check Error
+
+checkError :: Node -> Node
+checkError (Node (TError s) _) = Error s
+checkError (Node _ (VError s)) = Error s
+checkError n@(Node _ (VStmt ns)) = checkNsAR n (checkEIN ns)
+checkError n@(Node _ (VKdefs n')) = checkNAR n (checkError n')
+checkError n@(Node _ (VDefs n1 n2)) = checkNsAR n (checkEIN [n1, n2])
+checkError n@(Node _ (VPrototype n1 n2)) = checkNsAR n (checkEIN [n1, n2])
+checkError n@(Node _ (VPrototypeArgs nts n')) =
+    checkNsAR n (checkEIN [checkNTAR cEN (checkErrorInNodeTuples nts), n'])
+checkError n@(Node _ (VForExpr (n1, n2) (n3, n4) n5 n6)) =
+    checkNsAR n (checkEIN [n1, n2, n3, n4, n5, n6])
+checkError n = checkError' n
+
+checkError' :: Node -> Node
+checkError' n@(Node _ (VExprs ns)) = checkNsAR n (checkEIN ns)
+checkError' n@(Node _ (VIfExpr n1 n2 n3)) = checkNsAR n (checkEIN [n1, n2, n3])
+checkError' n@(Node _ (VWhileExpr n1 n2)) = checkNsAR n (checkEIN [n1, n2])
+checkError' n@(Node _ (VExpr n' nts)) =
+    checkNsAR n (checkEIN [n', checkNTAR cEN (checkErrorInNodeTuples nts)])
+checkError' n@(Node _ (VUnary n1 n2)) = checkNsAR n (checkEIN [n1, n2])
+checkError' n@(Node _ (VPostfix n1 n2)) = checkNsAR n (checkEIN [n1, n2])
+checkError' n@(Node _ (VCallExpr ns)) = checkNsAR n (checkEIN ns)
+checkError' n@(Node _ (VPrimary n')) = checkNAR n (checkError n')
+checkError' n@(Node _ (VLiteral n')) = checkNAR n (checkError n')
+checkError' n = n
+
+checkErrorInNodes :: [Node] -> [Node]
+checkErrorInNodes (n:ns) =
+    case (checkError n, checkErrorInNodes ns) of 
+        (Error s, _) -> [Error s]
+        (_, [Error s]) -> [Error s]
+        (n', ns') -> n' : ns'
+checkErrorInNodes [] = []
+
+checkEIN :: [Node] -> [Node]
+checkEIN = checkErrorInNodes
+
+checkErrorInNodeTuples :: [(Node, Node)] -> [(Node, Node)]
+checkErrorInNodeTuples ((n1, n2):ns) =
+    case ((checkError n1, checkError n2), checkErrorInNodeTuples ns) of 
+        ((Error s, _), _) -> [(Error s, Error s)]
+        ((_, Error s), _) -> [(Error s, Error s)]
+        (_, [(Error s, _)]) -> [(Error s, Error s)]
+        (_, [(_, Error s)]) -> [(Error s, Error s)]
+        (n', ns') -> n' : ns'
+checkErrorInNodeTuples [] = []
+
+checkNodeAndReturn :: Node -> Node -> Node
+checkNodeAndReturn _ (Error s) = Error s
+checkNodeAndReturn node _ = node
+
+checkNAR :: Node -> Node -> Node 
+checkNAR = checkNodeAndReturn
+
+checkNodesAndReturn :: Node -> [Node] -> Node
+checkNodesAndReturn _ (Error s:_) = Error s
+checkNodesAndReturn node _ = node 
+
+checkNsAR :: Node -> [Node] -> Node 
+checkNsAR = checkNodesAndReturn
+
+checkNodeTuplesAndReturn :: Node -> [(Node, Node)] -> Node
+checkNodeTuplesAndReturn _ ((Error s, _):_) = Error s
+checkNodeTuplesAndReturn _ ((_, Error s):_) = Error s
+checkNodeTuplesAndReturn node _ = node 
+
+checkNTAR :: Node -> [(Node, Node)] -> Node
+checkNTAR = checkNodeTuplesAndReturn
 
 -- create Basic Nodes
 
 createEmptyNode :: Node
 createEmptyNode = Node TNone VNothing
+
+cEN :: Node
+cEN = createEmptyNode
 
 -- create Decimal Const
 
