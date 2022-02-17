@@ -99,7 +99,8 @@ litToLLVM _ = error "Unknown type"
 
 valueToLLVM :: Value -> Codegen Operand
 valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
-valueToLLVM (VDoubleConst v) = pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
+valueToLLVM (VDoubleConst v) =
+    pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
 valueToLLVM _ = error "Unknown type"
 
 -------- PRIMARY
@@ -218,7 +219,8 @@ assignToLLVM _ _ = error "Unknown type"
 ------- UNOP
 
 unaryToLLVM :: Node -> Codegen Operand
-unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) val')) = minusToLLVM (nodeToValTmp val')
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) val')) =
+    minusToLLVM (nodeToValTmp val')
 unaryToLLVM (Node _ (VUnary post (Node TNone VNothing))) = postfixToLLVM post
 unaryToLLVM _ = error "Unknown type"
 
