@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module MyLLVM where
 
--- import LLVM
+-- IMPORT LLVM
 
 import LLVM.IRBuilder as IRB
 -- import LLVM.CodeGenOpt
@@ -30,7 +30,7 @@ import LLVM.AST
 
 -- IMPORT CONTROL.MONAD
 
-import Control.Monad.Reader
+-- import Control.Monad.Reader
 -- import Control.Monad
 -- import Control.Monad.IO.Class
 -- import Control.Monad.Except
@@ -40,7 +40,7 @@ import Control.Monad.Reader
 
 -- IMPORT DATA
 
-import Data.String
+import Data.String()
 -- import Data.IORef
 -- import Data.Int
 -- import qualified Data.ByteString.Char8 as BS
@@ -55,13 +55,16 @@ import Data.String
 
 -- OTHER IMPORTS
 
-import qualified Data.Map as Map
+import qualified Data.Map as Map()
 import Prelude hiding (mod)
 -- import Foreign.Ptr
 -- import Data (ArgsType (Int, Double, Void))
 -- import Numeric
 -- import Text.ParserCombinators.ReadP (endBy)
 
+-- OUR IMPORTS
+
+import Data (Codegen)
 
 -- type Binds = Map.Map String Operand
 
@@ -76,18 +79,18 @@ import Prelude hiding (mod)
 -- typeToLType Int = LType.i32
 -- typeToLType _ = error "Unkown type"
 
-type AssignedValues = Map.Map String Operand
+-- type AssignedValues = Map.Map String Operand
 
-type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
+-- type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
 
 
 load' :: Operand -> Codegen Operand
 load' adr = load adr 0
 
 store' :: Operand -> Operand -> Codegen ()
-store' adr val = store adr 0 val
+store' adr = store adr 0
 
-allocate :: Type -> Operand -> Codegen Operand
+allocate :: LLVM.AST.Type -> Operand -> Codegen Operand
 allocate ty val = do
     adr <- alloca ty (Just (IRB.int32 1)) 0
     store' adr val
@@ -108,7 +111,7 @@ if' cond instr = mdo
     condBr cond ifBlock end
 
     ifBlock <- block `named` "if.start"
-    instr
+    _ <- instr
     br end
 
     end <- block `named` "if.end"
@@ -173,14 +176,6 @@ while' cond instr = mdo
 -- myBinop Mul = myMul
 
 -- Binop
-myAdd :: Operand -> Operand -> IRBuilder Operand
-myAdd a b = add a b
-
-mySub :: Operand -> Operand -> IRBuilder Operand
-mySub a b = sub a b
-
-myMul :: Operand -> Operand -> IRBuilder Operand
-myMul a b = mul a b
 
 -- myDiv :: Operand -> Operand -> IRBuilder Operand
 -- myDiv a b = div a b

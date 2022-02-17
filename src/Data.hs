@@ -145,9 +145,9 @@ data CompilerState = CompilerState {
   x :: Int
 }
 
-type AssignedValues = Map.Map String Operand
+type AssignedValues = Map String Operand
 
-type Codegen = ReaderT CompilerState (IRBuilderT ModuleBuilder)
+type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
 
 type BinopFct = Operand -> Operand -> Codegen Operand
 type CondFct = Sicmp.IntegerPredicate

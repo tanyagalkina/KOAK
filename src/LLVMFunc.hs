@@ -22,34 +22,35 @@ import LLVM.AST
 import LLVM.AST.Float
 import LLVM.AST.Constant
 import qualified LLVM.AST.IntegerPredicate as Sicmp
+import LLVM.AST.Type as Type
 -- import LLVM.AST.Global
 -- import LLVM.AST.AddrSpace
 -- import LLVM.AST.FloatingPointPredicate hiding (False, True)
 -- import LLVM.AST.Operand as Op
--- import LLVM.AST.Type as Type
 
 import LLVM.IRBuilder as IRB
+import LLVM.IRBuilder.Constant as Const
 -- import LLVM.IRBuilder.Instruction
 -- import LLVM.IRBuilder.Module
--- import LLVM.IRBuilder.Constant as Const
+
 
 -- import LLVM.Prelude (traverse)
 
 -- IMPORT CONTROL.MONAD
 
 import Control.Monad
+import Control.Monad.Reader
 -- import Control.Monad.Except
 -- import Control.Monad.IO.Class
 -- import Control.Monad.Trans
 -- import Control.Monad.Fix
 -- import Control.Monad.List (ListT)
--- import Control.Monad.Reader (ReaderT (runReaderT))
 
 -- IMPORT DATA
 
+import Data.String
 -- import Data.IORef
 -- import Data.Int
--- import Data.String
 -- import Data.Word
 -- import qualified Data.Ix as Type
 
@@ -63,7 +64,7 @@ import Control.Monad
 
 -- OTHER IMPORTS
 
--- import qualified Data.Map as Map
+import qualified Data.Map as Map
 -- import Foreign.Ptr
 import Prelude hiding (mod)
 -- import Numeric
@@ -74,6 +75,7 @@ import Prelude hiding (mod)
 import Data (Value (..), Binop (..), Type (..), AST, Node (..), Codegen, BinopFct, Unop (..))
 import MyLLVM (store', load')
 
+
 astToVal :: AST -> Value
 astToVal (Node _ v) = v
 
@@ -82,7 +84,7 @@ astToType (Node t _) = t
 
 
 nodeToVal :: Node -> Value
-nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ value))))) _)) _)) = value
+nodeToVal (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ val))))) _)) _)) = val
 nodeToVal _ = error "error: node to value"
 
 
@@ -101,8 +103,18 @@ litToLLVM (Node TDouble  v) = valueToLLVM v
 litToLLVM _ = error "Unknown type"
 
 
+loadIdentifier :: String -> Codegen Operand
+loadIdentifier name = do
+                    variables <- ask
+                    case variables Map.!? name of
+                        Just v -> do
+                                -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
+                                load' v
+                        Nothing -> valueToLLVM (VDecimalConst 42)
+
 primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VLiteral v)) = litToLLVM v
+primaryToLLVM (Node _ (VIdentifier name)) = loadIdentifier name
 primaryToLLVM _ = error "Unkown type"
 
 postfixToLLVM :: Node -> Codegen Operand
@@ -142,7 +154,7 @@ opToLLVM op a b = mdo
     br addBlock
 
     addBlock <- block `named` "add.start"
-    res <- (fct op) a' b'
+    res <- fct op a' b'
     return res
     where
       fct Data.Add = add
@@ -210,16 +222,15 @@ neqToLLVM a b = mdo
 -- [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Assign),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])]
 
 assignToLLVM :: Value -> Value  -> Codegen Operand
--- assignToLLVM (VIdentifier varName) varValue = mdo
---     val <- valueToLLVM varValue
---     br assignBlock
+assignToLLVM (VIdentifier varName) varValue = mdo
+    val <- valueToLLVM varValue
+    br assignBlock
 
---     assignBlock <- block `named` "assign.start"
---     ptr <- alloca Type.i32 (Just (Type.int32 1)) 0 `named` (fromString varName)
---     store' ptr val
---     let tmp = Map.insert varName ptr
---     res <- load' ptr
---     return res
+    assignBlock <- block `named` "assign.start"
+    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString varName
+    store' ptr val
+    let tmp = Map.insert varName ptr
+    load' ptr
 assignToLLVM _ _ = error "Unknown type"
 
 
