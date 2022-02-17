@@ -93,7 +93,7 @@ data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
 data WhileExpr = WhileExpr Expr Exprs
     deriving (Show, Eq)
 
--- unary (# binop ( unary ) )*
+-- unary (#binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
     deriving (Show, Eq)
 
