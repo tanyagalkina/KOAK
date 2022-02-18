@@ -350,6 +350,45 @@ whileToLLVM (Node _ (VWhileExpr e es)) = mdo
     return $ int32 0
 whileToLLVM n = error (getErrorMessage "While Expr" n)
 
+
+-- forToLLVM :: (Node, Node) -> (Node, Node) -> Node -> Node -> Codegen Operand
+-- forToLLVM (itName, itVal) (condName, condVal) act instrs = mdo
+--     itVal' <- exprToLLVM itVal
+--     start <- currentBlock
+--     br begin
+
+--     begin <- block `named` "for.begin"
+--     loopVal <- phi [(itVal', start), (updatedVal, bodyEnd)]
+--     res <- ltToLLVM loopVal  condVal
+--     condBr res bodyStart end
+
+--     bodyStart <- block `named` "for.body"
+--     _ <- withReaderT (Map.insert (getIdentifierName itName) loopVal) $ exprsToLLVM instrs
+
+--     updatedVal <-  withReaderT (Map.insert (getIdentifierName itName) loopVal) $ exprToLLVM act
+--     bodyEnd <- currentBlock
+--     br begin
+
+--     end <- block `named` "for.end"
+--     return $ int32 0
+
+
+ifToLLVM :: Node -> Node -> Node -> Codegen Operand
+ifToLLVM cond thenInstr elseInstr = mdo
+    condRes <- exprToLLVM cond
+    condBr condRes thenBlock elseBlock
+
+    thenBlock <- block `named` "if.then"
+    _ <- exprsToLLVM thenInstr
+    br end
+
+    elseBlock <- block `named` "if.else"
+    _ <- exprsToLLVM elseInstr
+    br end
+
+    end <- block `named` "if.end"
+    return $ int32 0
+
 -------- EXPRS
 
 exprsToLLVM :: Node -> Codegen Operand
