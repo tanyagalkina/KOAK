@@ -3,6 +3,8 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant return" #-}
 module LLVMFunc where
 
 -- IMPORT LLVM
@@ -74,6 +76,8 @@ import Prelude hiding (mod)
 
 import Data (Value (..), Binop (..), Type (..), AST, Node (..), Codegen, Unop (..))
 import MyLLVM (store', load')
+import qualified LLVM.AST as AST
+import LLVM.AST.AddrSpace
 
 -------- GET PART OF NODE
 
@@ -86,8 +90,9 @@ nodeToType (Node t _) = t
 --------- TMP
 
 nodeToValTmp :: Node -> Value
+nodeToValTmp (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ v@(VIdentifier _)))) _)) _)) = v
 nodeToValTmp (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ val))))) _)) _)) = val
-nodeToValTmp _ = error "error: node to value"
+nodeToValTmp node = error $ "error: node to value" ++  show node
 
 -------- LITERAL
 
@@ -95,20 +100,20 @@ litToLLVM :: Node -> Codegen Operand
 litToLLVM (Node TInteger (VDecimalConst v)) = return (int32 $ toInteger v)
 litToLLVM (Node TDouble (VDoubleConst v)) =
     pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
-litToLLVM _ = error "Unknown type"
+litToLLVM n = error $"litToLLVM: Unknown type" ++ show n
 
 valueToLLVM :: Value -> Codegen Operand
 valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
 valueToLLVM (VDoubleConst v) =
     pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
-valueToLLVM _ = error "Unknown type"
+valueToLLVM n = error  $ "valueToLLVM: Unknown type" ++ show n
 
 -------- PRIMARY
 
 primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VLiteral v)) = litToLLVM v
 primaryToLLVM (Node _ (VIdentifier name)) = loadIdentifier name
-primaryToLLVM _ = error "Unkown type"
+primaryToLLVM n = error $ "primaryToLLVM: Unkown type" ++ show n
 
 loadIdentifier :: String -> Codegen Operand
 loadIdentifier name = do
@@ -117,21 +122,31 @@ loadIdentifier name = do
                         Just v -> do
                                 -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
                                 load' v
-                        Nothing -> valueToLLVM (VDecimalConst 42)
+                        -- Nothing -> valueToLLVM (VDecimalConst 42)
+                        Nothing -> do -- error $ "LoadIndentifier" ++ show variables
+                            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString "lolilol_0")
+                            load var 0
 
 -------- POSTFIX
 
 postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPrimary v)) = primaryToLLVM v
-postfixToLLVM _ = error "Unkown Type"
+postfixToLLVM (Node TInteger (VPostfix (Node TInteger (VPrimary p )) _)) = primaryToLLVM p
+postfixToLLVM n = error $ "postfixToLLVM: Unkown Type" ++ show n
 
 -------- EXPR
+
+exprsToLLVM :: [Node] -> Codegen Operand
+exprsToLLVM [] = return $ int32 0
+exprsToLLVM [x] = exprToLLVM x
+exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
+
 
 exprToLLVM :: Node -> Codegen Operand
 exprToLLVM (Node _ (VExpr v ((op, v'):xs))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [(op, v')])) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
-exprToLLVM _ = error "Unkown type"
+exprToLLVM n = error $ "exprToLLVM: Unkown type" ++ show n
 
 -------- BINOP
 
@@ -146,7 +161,7 @@ binopToLLVM op v v' = case nodeToVal op of
   (VBinop Data.Neq) -> neqToLLVM (nodeToValTmp v) (nodeToValTmp v')
   (VBinop Data.Assign) -> assignToLLVM (nodeToValTmp v) (nodeToValTmp v')
   (VBinop op') -> opToLLVM op' (nodeToValTmp v) (nodeToValTmp v')
-  _ -> error "Unknown Type"
+  _ -> error "binopToLLVM: Unknown Type"
 
 opToLLVM :: Binop -> Value -> Value -> Codegen Operand
 opToLLVM op a b = mdo
@@ -204,17 +219,43 @@ neqToLLVM a b = mdo
     res <- icmp Sicmp.NE a' b'
     return res
 
+-- checkBind :: Codegen Operand -> Codegen Operand
+-- checkBind a = do
+--     a' <- ask
+--     error $ "check: " ++ show a'
+
+-- addBind :: String -> Operand -> Codegen Operand
+-- addBind name ptr' = do
+--     binds <- ask
+--     -- pure $ Map.fromList [("lol", int32 42)]
+--     -- res <- withReaderT (Map.fromList [("lol", int32 42)]) $ load' ptr'
+--     local (Map.insert name ptr') $ load' ptr'
+--     -- checkBind $ withReaderT (Map.insert name ptr') (load' ptr')
+--     -- return $( Map.insert name ptr') binds
+--     load' ptr'
+
 assignToLLVM :: Value -> Value  -> Codegen Operand
 assignToLLVM (VIdentifier varName) varValue = mdo
     val <- valueToLLVM varValue
     br assignBlock
 
     assignBlock <- block `named` "assign.start"
-    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString varName
+    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString "lolilol"
     store' ptr val
-    let tmp = Map.insert varName ptr
-    load' ptr
-assignToLLVM _ _ = error "Unknown type"
+    -- res <- addBind varName ptr
+    -- varia <- ask
+    -- Map.insert varName ptr varia
+    withReaderT (Map.insert varName ptr) $ load' ptr
+    -- error $ "assign: " ++ show varia
+    -- return res
+
+-- assignToLLVM (VIdentifier varName) varValue = do
+--     val <- valueToLLVM varValue
+--     ptr' <- alloca Type.i32 (Just $ ConstantOperand (Int 128 4)) 8 `named` fromString varName
+--     let tmp = Map.insert varName ptr
+--     store ptr' 8 val
+--     load ptr' 8
+assignToLLVM ident val = error $ "assignToLLVM: Unknown type: " ++ show ident ++ ", " ++ show val
 
 ------- UNOP
 
