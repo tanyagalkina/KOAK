@@ -79,13 +79,16 @@ import MyLLVM (store', load')
 import qualified LLVM.AST as AST
 import LLVM.AST.AddrSpace
 
+
 -------- GET PART OF NODE
 
 nodeToVal :: AST -> Value
 nodeToVal (Node _ v) = v
+nodeToVal _ = error "Error node"
 
 nodeToType :: AST -> Data.Type
 nodeToType (Node t _) = t
+nodeToType _ = error "Error node"
 
 --------- TMP
 
@@ -143,8 +146,7 @@ exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
 
 
 exprToLLVM :: Node -> Codegen Operand
-exprToLLVM (Node _ (VExpr v ((op, v'):xs))) = binopToLLVM op v v'
-exprToLLVM (Node _ (VExpr v [(op, v')])) = binopToLLVM op v v'
+exprToLLVM (Node _ (VExpr v ((op, v'):_))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
 exprToLLVM n = error $ "exprToLLVM: Unkown type" ++ show n
 
@@ -169,8 +171,13 @@ opToLLVM op a b = mdo
     b' <- valueToLLVM b
     br addBlock
 
-    addBlock <- block `named` "add.start"
+    addBlock <- block `named` "opBlock"
+    -- myPuts <- extern "puts" [ptr i8] i32
+    -- plouf <- LLVM.IRBuilder.Instruction.call myPuts []
     res <- fct op a' b'
+    -- a2 <- valueToLLVM (VDecimalConst 0)
+    -- b2 <- valueToLLVM (VDecimalConst 0)
+    -- test <- add a2 b2
     return res
     where
         fct Data.Add = add
@@ -185,7 +192,7 @@ gtToLLVM a b = mdo
     b' <- valueToLLVM b
     br subBlock
 
-    subBlock <- block `named` "sub.start"
+    subBlock <- block `named` "gtBlock"
     res <- icmp Sicmp.SGT a' b'
     return res
 
@@ -195,7 +202,7 @@ ltToLLVM a b = mdo
     b' <- valueToLLVM b
     br subBlock
 
-    subBlock <- block `named` "sub.start"
+    subBlock <- block `named` "ltBlock"
     res <- icmp Sicmp.SLT a' b'
     return res
 
@@ -205,7 +212,7 @@ eqToLLVM a b = mdo
     b' <- valueToLLVM b
     br subBlock
 
-    subBlock <- block `named` "sub.start"
+    subBlock <- block `named` "eqBlock"
     res <- icmp Sicmp.EQ  a' b'
     return res
 
@@ -215,7 +222,7 @@ neqToLLVM a b = mdo
     b' <- valueToLLVM b
     br subBlock
 
-    subBlock <- block `named` "sub.start"
+    subBlock <- block `named` "neqBlock"
     res <- icmp Sicmp.NE a' b'
     return res
 

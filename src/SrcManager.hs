@@ -17,7 +17,7 @@ import qualified Data.Maybe
 import CreateAST
 import Parser
 import ToLLVM (astToLLVM)
-import Data (Value(VDoubleConst, VDecimalConst, VExpr, VUnary, VPostfix, VPrimary, VLiteral, VNothing, VBinop, VUnop), Node (..), Type (..), Binop (Add, Sub, Mul, Div, Gt), Unop (Minus))
+import Data (Value(VDecimalConst, VExpr, VUnary, VPostfix, VPrimary, VLiteral, VNothing, VUnop), Node (..), Type (..), Unop (Minus))
 
 
 exampleExpr :: Node
@@ -27,10 +27,10 @@ emptyModule :: ShortByteString -> AST.Module
 emptyModule label = AST.defaultModule {AST.moduleName = label}
 
 initErrorModule:: AST.Module
-initErrorModule = emptyModule "my error koak"
+initErrorModule = emptyModule "errorModule"
 
 initModule :: AST.Module
-initModule = emptyModule "koakKoakKoak"
+initModule = emptyModule "koakModule"
 
 process :: AST.Module -> String -> IO AST.Module
 process _ source = do
@@ -38,8 +38,7 @@ process _ source = do
   case res of
       Nothing -> putStrLn "SYNTAX ERROR" >> return initErrorModule
       -- Just expr -> astToLLVM (fst ex) >> return initErrorModule
-      Just expr -> putStrLn "AST LOOKS LIKE : " >> print expr
-        >> astToLLVM exampleExpr >> return initErrorModule
+      Just _ -> astToLLVM exampleExpr >> return initErrorModule
 
 replace :: Eq b => b -> b -> [b] -> [b]
 replace a b = map $ Data.Maybe.fromMaybe b . mfilter (/= a) . Just
@@ -56,8 +55,8 @@ processFiles :: [String] -> IO AST.Module
 processFiles fnames = concatSources "" fnames >>= process initModule
 
 repl :: IO ()
-repl = traceShow
-  ("KOAK Version 1.0.0\nCopyright 2021-2022 Epitech Roazhon, Inc." ) runInputT defaultSettings (loop initModule)
+repl = traceShow ("KOAK Version 1.0.0\nCopyright 2021-2022 Epitech Roazhon, Inc." :: [Char])
+                 runInputT defaultSettings (loop initModule)
     where
     loop mod = do
         minput <- getInputLine "koak> "
