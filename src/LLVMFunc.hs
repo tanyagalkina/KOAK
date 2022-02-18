@@ -22,6 +22,7 @@ module LLVMFunc where
 -- import LLVM.Pretty
 
 import LLVM.AST
+import qualified LLVM.AST as AST
 import LLVM.AST.Float
 import LLVM.AST.Constant
 import qualified LLVM.AST.IntegerPredicate as Sicmp
@@ -33,8 +34,8 @@ import LLVM.AST.Type as Type
 
 import LLVM.IRBuilder as IRB
 import LLVM.IRBuilder.Constant as Const
+import LLVM.IRBuilder.Module
 -- import LLVM.IRBuilder.Instruction
--- import LLVM.IRBuilder.Module
 
 
 -- import LLVM.Prelude (traverse)
@@ -75,9 +76,8 @@ import Prelude hiding (mod)
 
 -- OUT IMPORTS
 
-import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..))
+import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..))
 import MyLLVM (store', load')
-import qualified LLVM.AST as AST
 import LLVM.AST.AddrSpace
 
 
@@ -114,15 +114,12 @@ litToLLVM n = error (getErrorMessage "Literal" n)
 
 -------- IDENTIFIER
 
-getIdentifierName :: Node -> String
-getIdentifierName (Node _
-                      (VUnary (Node _
-                          (VPostfix (Node _
-                              (VPrimary (Node _
-                                  (VIdentifier s))))
-                              (Node TNone VNothing)))
-                          (Node TNone VNothing))) = s
-getIdentifierName n = error ("Recuperation of Identifier string failed" ++ show n)
+getIdentifier :: Node -> String
+getIdentifier (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary
+                  (Node _ (VIdentifier s)))) (Node TNone VNothing)))
+                  (Node TNone VNothing))) = s
+getIdentifier (Node _ (VPrototype (Node _ (VIdentifier s)) _)) = s
+getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
 
 loadIdentifier :: String -> Codegen Operand
 loadIdentifier name = do
@@ -142,6 +139,7 @@ primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
 primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
     loadIdentifier name
+primaryToLLVM (Node _ (VPrimary n@(Node _ (VExprs _)))) = exprsToLLVM n
 primaryToLLVM n = error (getErrorMessage "Primary" n)
 
 -------- POSTFIX
@@ -283,12 +281,12 @@ assignToLLVM i u = mdo
     br assignBlock
 
     assignBlock <- block `named` "assign.start"
-    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifierName i)
+    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
     store' ptr val
     -- res <- addBind varName ptr
     -- varia <- ask
     -- Map.insert varName ptr varia
-    withReaderT (Map.insert (getIdentifierName i) ptr) $ load' ptr
+    withReaderT (Map.insert (getIdentifier i) ptr) $ load' ptr
     -- error $ "assign: " ++ show varia
     -- return res
 
@@ -357,9 +355,59 @@ exprsToLLVM (Node _ (VExprs [n@(Node _ (VWhileExpr _ _))])) = whileToLLVM n
 exprsToLLVM (Node _ (VExprs [n@(Node _ (VForExpr {}))])) = exprToLLVM n
 exprsToLLVM (Node _ (VExprs [n@(Node _ (VIfExpr {}))])) = exprToLLVM n
 exprsToLLVM (Node _ (VExprs [n@(Node _ (VExpr {}))])) = exprToLLVM n
-exprsToLLVM (Node t (VExprs (x:xs))) = exprToLLVM x >>
-                                       exprsToLLVM (Node t (VExprs xs))
+exprsToLLVM (Node t (VExprs (n@(Node _ (VExpr {})):ns))) = exprToLLVM n >>
+                                       exprsToLLVM (Node t (VExprs ns))
 exprsToLLVM n = error (getErrorMessage "Exprs" n)
+
+-------- ARGS TYPE
+
+argsTypeToLLVM :: Node -> Codegen AST.Type
+argsTypeToLLVM (Node _ (VArgsType Data.Int)) = return i32
+argsTypeToLLVM (Node _ (VArgsType Data.Double)) = return Type.double
+argsTypeToLLVM (Node _ (VArgsType Void)) = return Type.void
+argsTypeToLLVM n = error (getErrorMessage "Args Type" n)
+
+-------- PROTOTYPE ARGS
+
+prototypeArgsToLLVM :: Node -> Codegen ([(AST.Type, ParameterName)], AST.Type)
+prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) = mdo
+    parameters <- getAllParameters iats
+    returnType <- argsTypeToLLVM at
+    return (parameters, returnType)
+prototypeArgsToLLVM n = error (getErrorMessage "Prototype Args" n)
+
+getAllParameters :: [(Node, Node)] -> Codegen [(AST.Type, ParameterName)]
+getAllParameters (((Node _ (VIdentifier s)), at): iats) = mdo
+    type' <- argsTypeToLLVM at
+    rest <- getAllParameters iats
+    return ((type', fromString s) : rest)
+getAllParameters [] = mdo
+    return []
+getAllParameters _ = error (getErrorMessage "Prototype Args" (Error ""))
+
+-------- PROTOTYPE
+
+prototypeToLLVM :: Node -> Codegen ([(AST.Type, ParameterName)], AST.Type)
+prototypeToLLVM (Node _ (VPrototype _ pa)) = mdo
+    parametersAndReturnType <- prototypeArgsToLLVM pa
+    return parametersAndReturnType
+prototypeToLLVM n = error (getErrorMessage "Prototype" n)
+
+-------- DEFS
+
+defsToLLVM :: Node -> Codegen ()
+defsToLLVM (Node _ (VDefs p es)) = mdo
+    let funcName = getIdentifier p
+    (parameters, returnType) <- prototypeArgsToLLVM p
+    _ <- LLVM.IRBuilder.Module.function (mkName funcName) parameters returnType $ \args -> do
+        -- runReaderT (Map.insert (getIdentifier p) (head args)) $ exprsToLLVM es
+        runReaderT (Map.fromList [(funcName, head args)]) $ exprsToLLVM es
+    pure ()
+defsToLLVM n = error (getErrorMessage "Defs" n)
+
+-- _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
+--         res <- runReaderT (compileInstrs instr) state
+--         ret res
 
 -------- ERROR
 
