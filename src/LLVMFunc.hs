@@ -100,7 +100,7 @@ decimalConstToLLVM _ = error (getErrorMessage "Decimal Const")
 -------- DOUBLE CONST
 
 doubleConstToLLVM :: Node -> Codegen Operand
-doubleConstToLLVM (Node TInteger (VDoubleConst d)) =
+doubleConstToLLVM (Node TDouble (VDoubleConst d)) =
     pure $ ConstantOperand (Float (LLVM.AST.Float.Double d))
 doubleConstToLLVM _ = error (getErrorMessage "Double Const")
 
@@ -188,24 +188,62 @@ binopToLLVM b u u' = case nodeToVal b of
 
 opToLLVM :: Binop -> Node -> Node -> Codegen Operand
 opToLLVM op u u' = mdo
-    a <- unaryToLLVM u
-    b <- unaryToLLVM u'
     br addBlock
 
     addBlock <- block `named` "opBlock"
     -- myPuts <- extern "puts" [ptr i8] i32
     -- plouf <- LLVM.IRBuilder.Instruction.call myPuts []
-    res <- fct op a b
+    res <- fct op u u'
     -- a2 <- valueToLLVM (VDecimalConst 0)
     -- b2 <- valueToLLVM (VDecimalConst 0)
     -- test <- add a2 b2
     return res
     where
-        fct Data.Add = add
-        fct Data.Sub = sub
-        fct Data.Mul = mul
-        fct Data.Div = sdiv
+        fct Data.Add = addToLLVM
+        fct Data.Sub = subToLLVm
+        fct Data.Mul = mulToLLVM
+        fct Data.Div = divToLLVM
         fct _ = error (getErrorMessage "Binop")
+
+addToLLVM :: Node -> Node -> Codegen Operand
+addToLLVM u@(Node t (VUnary _ _)) u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
+    case t of
+        TInteger -> add a b
+        TDouble -> fadd a b
+        _ -> error (getErrorMessage "Add")
+addToLLVM _ _ = error (getErrorMessage "Add")
+
+subToLLVm :: Node -> Node -> Codegen Operand
+subToLLVm u@(Node t (VUnary _ _)) u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
+    case t of
+        TInteger -> sub a b
+        TDouble -> fsub a b
+        _ -> error (getErrorMessage "Sub")
+subToLLVm _ _ = error (getErrorMessage "Sub")
+
+mulToLLVM :: Node -> Node -> Codegen Operand
+mulToLLVM u@(Node t (VUnary _ _)) u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
+    case t of
+        TInteger -> mul a b
+        TDouble -> fmul a b
+        _ -> error (getErrorMessage "Mul")
+mulToLLVM _ _ = error (getErrorMessage "Mul")
+
+divToLLVM :: Node -> Node -> Codegen Operand
+divToLLVM u@(Node t (VUnary _ _)) u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
+    case t of
+        TInteger -> sdiv a b
+        TDouble -> fdiv a b
+        _ -> error (getErrorMessage "Div")
+divToLLVM _ _ = error (getErrorMessage "Div")
 
 gtToLLVM :: Node -> Node  -> Codegen Operand
 gtToLLVM u u' = mdo
