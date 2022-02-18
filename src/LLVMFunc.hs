@@ -109,7 +109,7 @@ doubleConstToLLVM _ = error (getErrorMessage "Double Const")
 litToLLVM :: Node -> Codegen Operand
 litToLLVM (Node TInteger (VLiteral n)) = decimalConstToLLVM n
 litToLLVM (Node TDouble (VLiteral n)) = doubleConstToLLVM n
-litToLLVM n = error ((getErrorMessage "Literal") ++ show n)
+litToLLVM n = error (getErrorMessage "Literal" ++ show n)
 
 -------- IDENTIFIER
 
@@ -123,14 +123,6 @@ getIdentifierName (Node _
                           (Node TNone VNothing))) = s
 getIdentifierName n = error ("Recuperation of Identifier string failed" ++ show n)
 
--------- PRIMARY
-
-primaryToLLVM :: Node -> Codegen Operand
-primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
-primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
-    loadIdentifier name
-primaryToLLVM n = error ((getErrorMessage "Primary") ++ show n)
-
 loadIdentifier :: String -> Codegen Operand
 loadIdentifier name = do
     variables <- ask
@@ -143,12 +135,20 @@ loadIdentifier name = do
             let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString "lolilol_0")
             load var 0
 
+-------- PRIMARY
+
+primaryToLLVM :: Node -> Codegen Operand
+primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
+primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
+    loadIdentifier name
+primaryToLLVM n = error (getErrorMessage "Primary" ++ show n)
+
 -------- POSTFIX
 
 postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
-postfixToLLVM n = error ((getErrorMessage "Postfix") ++ show n)
+postfixToLLVM n = error (getErrorMessage "Postfix" ++ show n)
 
 ------- UNARY
 
@@ -165,17 +165,15 @@ exprsToLLVM [] = return $ int32 0
 exprsToLLVM [x] = exprToLLVM x
 exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
 
-
 exprToLLVM :: Node -> Codegen Operand
 exprToLLVM (Node _ (VExpr v ((op, v'):_))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
-exprToLLVM n = error ((getErrorMessage "Expr") ++ show n)
+exprToLLVM n = error (getErrorMessage "Expr" ++ show n)
+
+
 
 -------- BINOP
 
-{-
-    Operator -> Value 1 -> Value 2 -> result
--}
 binopToLLVM :: Node -> Node -> Node -> Codegen Operand
 binopToLLVM b u u' = case nodeToVal b of
   (VBinop Data.Gt) -> gtToLLVM u u'
