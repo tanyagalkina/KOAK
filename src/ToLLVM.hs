@@ -28,7 +28,7 @@ import LLVM.Relocation as R
 import LLVM.CodeModel as C
 
 import LLVMFunc as F
-import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..), Codegen)
+import Data (Value(VDecimalConst, VDoubleConst, VExpr, VExprs), AST, Node (..), Codegen)
 import qualified Control.Applicative()
 import qualified Data.IntMap()
 import qualified Data.Map as Map
@@ -58,4 +58,5 @@ compileInstrs instr = case instr of
     (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
     n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
+    (Data.Node _ (VExprs exprs)) -> F.exprsToLLVM exprs
     _ -> error "Unknown val"
