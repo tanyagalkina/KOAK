@@ -113,7 +113,7 @@ litToLLVM n = error (getErrorMessage "Literal" ++ show n)
 
 -------- IDENTIFIER
 
-getIdentifierName :: Node -> String 
+getIdentifierName :: Node -> String
 getIdentifierName (Node _
                       (VUnary (Node _
                           (VPostfix (Node _
@@ -127,13 +127,13 @@ loadIdentifier :: String -> Codegen Operand
 loadIdentifier name = do
     variables <- ask
     case variables Map.!? name of
-        Just v -> do
-            -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
-            load' v
-        -- Nothing -> valueToLLVM (VDecimalConst 42)
-        Nothing -> do -- error $ "LoadIndentifier" ++ show variables
-            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString "lolilol_0")
+        Just v -> pure v
+        Nothing -> do
+            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString (stringToLLVMVarName name))
             load var 0
+
+stringToLLVMVarName :: String -> String
+stringToLLVMVarName str = str ++ "_0"
 
 -------- PRIMARY
 
@@ -289,7 +289,7 @@ assignToLLVM i u = mdo
     br assignBlock
 
     assignBlock <- block `named` "assign.start"
-    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString "lolilol"
+    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifierName i)
     store' ptr val
     -- res <- addBind varName ptr
     -- varia <- ask
@@ -340,5 +340,5 @@ generateMinusOne =
 
 -------- ERROR
 
-getErrorMessage :: String -> String 
+getErrorMessage :: String -> String
 getErrorMessage s = "Integration of " ++ s ++ " into LLVM module failed"
