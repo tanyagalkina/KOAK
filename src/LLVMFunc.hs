@@ -97,6 +97,8 @@ decimalConstToLLVM (Node TInteger (VDecimalConst d)) =
     return (int32 $ toInteger d)
 decimalConstToLLVM _ = error (getErrorMessage "Decimal Const")
 
+-------- DOUBLE CONST
+
 doubleConstToLLVM :: Node -> Codegen Operand
 doubleConstToLLVM (Node TInteger (VDoubleConst d)) =
     pure $ ConstantOperand (Float (LLVM.AST.Float.Double d))
@@ -147,6 +149,14 @@ postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
 postfixToLLVM n = error ((getErrorMessage "Postfix") ++ show n)
+
+------- UNARY
+
+unaryToLLVM :: Node -> Codegen Operand
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) =
+    minusToLLVM u
+unaryToLLVM (Node _ (VUnary p (Node _ VNothing))) = postfixToLLVM p
+unaryToLLVM _ = error "Unknown type"
 
 -------- EXPR
 
@@ -274,14 +284,6 @@ assignToLLVM i u = mdo
 --     -- return $( Map.insert name ptr') binds
 --     load' ptr'
 
-------- UNARY
-
-unaryToLLVM :: Node -> Codegen Operand
-unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) =
-    minusToLLVM u
-unaryToLLVM (Node _ (VUnary p (Node _ VNothing))) = postfixToLLVM p
-unaryToLLVM _ = error "Unknown type"
-
 ------- UNOP
 
 minusToLLVM :: Node -> Codegen Operand
@@ -299,11 +301,6 @@ generateMinusOne =
                         (VDecimalConst (-1)))))))
                 (Node TNone VNothing)))
             (Node TNone VNothing))
-
--------- WHILE
-
--- whileToLLVM :: Value -> Codegen Operand
--- whileToLLVM v = undefined
 
 -------- ERROR
 

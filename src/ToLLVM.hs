@@ -52,9 +52,7 @@ astToLLVM instr = do
         withHostTargetMachine R.PIC C.Default opt $ \tm -> do
             writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod' -- generates an IR file
             writeObjectToFile tm (LLVM.Module.File "my.o") mod' -- builds an object file
-            callCommand "gcc my.o"
-            callCommand "./a.out"
-            callCommand "echo $?"
+            callCommand "./build.sh"
 
 
 compileModule' :: AST -> ModuleBuilder ()
