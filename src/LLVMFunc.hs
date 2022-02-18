@@ -400,48 +400,41 @@ exprsToLLVM n = error (getErrorMessage "Exprs" n)
 
 -------- ARGS TYPE
 
-argsTypeToLLVM :: Node -> Codegen AST.Type
-argsTypeToLLVM (Node _ (VArgsType Data.Int)) = return i32
-argsTypeToLLVM (Node _ (VArgsType Data.Double)) = return Type.double
-argsTypeToLLVM (Node _ (VArgsType Void)) = return Type.void
+argsTypeToLLVM :: Node ->  AST.Type
+argsTypeToLLVM (Node _ (VArgsType Data.Int)) = i32
+argsTypeToLLVM (Node _ (VArgsType Data.Double)) = Type.double
+argsTypeToLLVM (Node _ (VArgsType Void)) =  Type.void
 argsTypeToLLVM n = error (getErrorMessage "Args Type" n)
 
 -------- PROTOTYPE ARGS
 
-prototypeArgsToLLVM :: Node -> Codegen ([(AST.Type, ParameterName)], AST.Type)
-prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) = mdo
-    parameters <- getAllParameters iats
-    returnType <- argsTypeToLLVM at
-    return (parameters, returnType)
+prototypeArgsToLLVM :: Node -> ([(AST.Type, ParameterName)], AST.Type)
+prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) = (getAllParameters iats, argsTypeToLLVM at)
 prototypeArgsToLLVM n = error (getErrorMessage "Prototype Args" n)
 
-getAllParameters :: [(Node, Node)] -> Codegen [(AST.Type, ParameterName)]
-getAllParameters (((Node _ (VIdentifier s)), at): iats) = mdo
-    type' <- argsTypeToLLVM at
-    rest <- getAllParameters iats
-    return ((type', fromString s) : rest)
-getAllParameters [] = mdo
-    return []
+getAllParameters :: [(Node, Node)] -> [(AST.Type, ParameterName)]
+getAllParameters (((Node _ (VIdentifier s)), at): iats) = ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
+getAllParameters [] = []
 getAllParameters _ = error (getErrorMessage "Prototype Args" (Error ""))
 
 -------- PROTOTYPE
 
-prototypeToLLVM :: Node -> Codegen ([(AST.Type, ParameterName)], AST.Type)
-prototypeToLLVM (Node _ (VPrototype _ pa)) = mdo
-    parametersAndReturnType <- prototypeArgsToLLVM pa
-    return parametersAndReturnType
+prototypeToLLVM :: Node -> ([(AST.Type, ParameterName)], AST.Type)
+prototypeToLLVM (Node _ (VPrototype _ pa)) = prototypeArgsToLLVM pa
 prototypeToLLVM n = error (getErrorMessage "Prototype" n)
 
 -------- DEFS
 
-defsToLLVM :: Node -> Codegen ()
+defsToLLVM :: Node -> ModuleBuilder Operand
 defsToLLVM (Node _ (VDefs p es)) = mdo
     let funcName = getIdentifier p
-    (parameters, returnType) <- prototypeArgsToLLVM p
-    _ <- LLVM.IRBuilder.Module.function (mkName funcName) parameters returnType $ \args -> do
+    let (parameters, returnType) = prototypeArgsToLLVM p
+    fn <- LLVM.IRBuilder.Module.function (mkName funcName) parameters returnType $ \args -> do
+        let params  = (Map.fromList [("hello", (int32 1))])
         -- runReaderT (Map.insert (getIdentifier p) (head args)) $ exprsToLLVM es
-        runReaderT (Map.fromList [(funcName, head args)]) $ exprsToLLVM es
-    pure ()
+        res <- runReaderT (exprsToLLVM es) params
+        ret  res
+    return fn
 defsToLLVM n = error (getErrorMessage "Defs" n)
 
 -- _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
