@@ -69,5 +69,5 @@ compileInstrs instr = case instr of
     -- (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     -- (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
     n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
-    (Data.Node _ (VExprs exprs)) -> F.exprsToLLVM exprs
+    e@(Data.Node _ (VExprs exprs)) -> F.exprsToLLVM e
     _ -> error "Unknown val"
