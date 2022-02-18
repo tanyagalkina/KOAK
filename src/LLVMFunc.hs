@@ -96,21 +96,21 @@ nodeToType (Error s) = error s
 decimalConstToLLVM :: Node -> Codegen Operand
 decimalConstToLLVM (Node TInteger (VDecimalConst d)) =
     return (int32 $ toInteger d)
-decimalConstToLLVM _ = error (getErrorMessage "Decimal Const")
+decimalConstToLLVM n = error (getErrorMessage "Decimal Const" n)
 
 -------- DOUBLE CONST
 
 doubleConstToLLVM :: Node -> Codegen Operand
 doubleConstToLLVM (Node TDouble (VDoubleConst d)) =
     pure $ ConstantOperand (Float (LLVM.AST.Float.Double d))
-doubleConstToLLVM _ = error (getErrorMessage "Double Const")
+doubleConstToLLVM n = error (getErrorMessage "Double Const" n)
 
 -------- LITERAL
 
 litToLLVM :: Node -> Codegen Operand
 litToLLVM (Node TInteger (VLiteral n)) = decimalConstToLLVM n
 litToLLVM (Node TDouble (VLiteral n)) = doubleConstToLLVM n
-litToLLVM n = error (getErrorMessage "Literal" ++ show n)
+litToLLVM n = error (getErrorMessage "Literal" n)
 
 -------- IDENTIFIER
 
@@ -142,14 +142,14 @@ primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
 primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
     loadIdentifier name
-primaryToLLVM n = error (getErrorMessage "Primary" ++ show n)
+primaryToLLVM n = error (getErrorMessage "Primary" n)
 
 -------- POSTFIX
 
 postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
-postfixToLLVM n = error (getErrorMessage "Postfix" ++ show n)
+postfixToLLVM n = error (getErrorMessage "Postfix" n)
 
 ------- UNARY
 
@@ -164,7 +164,7 @@ unaryToLLVM _ = error "Unknown type"
 exprToLLVM :: Node -> Codegen Operand
 exprToLLVM (Node _ (VExpr v ((op, v'):_))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
-exprToLLVM n = error (getErrorMessage "Expr" ++ show n)
+exprToLLVM n = error (getErrorMessage "Expr" n)
 
 -------- BINOP
 
@@ -176,7 +176,7 @@ binopToLLVM b u u' = case nodeToVal b of
   (VBinop Data.Neq) -> neqToLLVM u u'
   (VBinop Data.Assign) -> assignToLLVM u u'
   (VBinop op') -> opToLLVM op' u u'
-  _ -> error (getErrorMessage "Binop")
+  _ -> error (getErrorMessage "Binop" (Error ""))
 
 opToLLVM :: Binop -> Node -> Node -> Codegen Operand
 opToLLVM op u u' = mdo
@@ -195,7 +195,7 @@ opToLLVM op u u' = mdo
         fct Data.Sub = subToLLVm
         fct Data.Mul = mulToLLVM
         fct Data.Div = divToLLVM
-        fct _ = error (getErrorMessage "Binop")
+        fct _ = error (getErrorMessage "Binop" (Error ""))
 
 addToLLVM :: Node -> Node -> Codegen Operand
 addToLLVM u@(Node t (VUnary _ _)) u' = mdo
@@ -204,8 +204,8 @@ addToLLVM u@(Node t (VUnary _ _)) u' = mdo
     case t of
         TInteger -> add a b
         TDouble -> fadd a b
-        _ -> error (getErrorMessage "Add")
-addToLLVM _ _ = error (getErrorMessage "Add")
+        _ -> error (getErrorMessage "Add" (Error ""))
+addToLLVM _ _ = error (getErrorMessage "Add" (Error ""))
 
 subToLLVm :: Node -> Node -> Codegen Operand
 subToLLVm u@(Node t (VUnary _ _)) u' = mdo
@@ -214,8 +214,8 @@ subToLLVm u@(Node t (VUnary _ _)) u' = mdo
     case t of
         TInteger -> sub a b
         TDouble -> fsub a b
-        _ -> error (getErrorMessage "Sub")
-subToLLVm _ _ = error (getErrorMessage "Sub")
+        _ -> error (getErrorMessage "Sub" (Error ""))
+subToLLVm _ _ = error (getErrorMessage "Sub" (Error ""))
 
 mulToLLVM :: Node -> Node -> Codegen Operand
 mulToLLVM u@(Node t (VUnary _ _)) u' = mdo
@@ -224,8 +224,8 @@ mulToLLVM u@(Node t (VUnary _ _)) u' = mdo
     case t of
         TInteger -> mul a b
         TDouble -> fmul a b
-        _ -> error (getErrorMessage "Mul")
-mulToLLVM _ _ = error (getErrorMessage "Mul")
+        _ -> error (getErrorMessage "Mul" (Error ""))
+mulToLLVM _ _ = error (getErrorMessage "Mul" (Error ""))
 
 divToLLVM :: Node -> Node -> Codegen Operand
 divToLLVM u@(Node t (VUnary _ _)) u' = mdo
@@ -234,8 +234,8 @@ divToLLVM u@(Node t (VUnary _ _)) u' = mdo
     case t of
         TInteger -> sdiv a b
         TDouble -> fdiv a b
-        _ -> error (getErrorMessage "Div")
-divToLLVM _ _ = error (getErrorMessage "Div")
+        _ -> error (getErrorMessage "Div" (Error ""))
+divToLLVM _ _ = error (getErrorMessage "Div" (Error ""))
 
 gtToLLVM :: Node -> Node  -> Codegen Operand
 gtToLLVM u u' = mdo
@@ -334,29 +334,35 @@ generateMinusOne =
 
 -------- WHILE
 
-whileToLLVM :: Node -> Node -> Codegen ()
-whileToLLVM e es = mdo
-    let evalCond = (exprsToLLVM [e] >>= icmp Sicmp.NE (int32 0))
+whileToLLVM :: Node -> Codegen Operand
+whileToLLVM (Node _ (VWhileExpr e es)) = mdo
+    let evalCond = (exprsToLLVM e >>= icmp Sicmp.NE (int32 0))
     initCond <- evalCond `named` "while.initCond"
     condBr initCond loopB endBlock
 
     loopB <- block `named` "while.start"
-    _ <- exprsToLLVM [es]
+    _ <- exprsToLLVM es
 
     cond <- evalCond
     condBr cond loopB endBlock
 
     endBlock <- block `named` "while.end"
-    pure ()
+    return $ int32 0
+whileToLLVM n = error (getErrorMessage "While Expr" n)
 
 -------- EXPRS
 
-exprsToLLVM :: [Node] -> Codegen Operand
-exprsToLLVM [] = return $ int32 0
-exprsToLLVM [x] = exprToLLVM x
-exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
+exprsToLLVM :: Node -> Codegen Operand
+exprsToLLVM (Node _ (VExprs [n@(Node _ (VWhileExpr _ _))])) = whileToLLVM n
+exprsToLLVM (Node _ (VExprs [n@(Node _ (VForExpr {}))])) = exprToLLVM n
+exprsToLLVM (Node _ (VExprs [n@(Node _ (VIfExpr {}))])) = exprToLLVM n
+exprsToLLVM (Node _ (VExprs [n@(Node _ (VExpr {}))])) = exprToLLVM n
+exprsToLLVM (Node t (VExprs (x:xs))) = exprToLLVM x >>
+                                       exprsToLLVM (Node t (VExprs xs))
+exprsToLLVM n = error (getErrorMessage "Exprs" n)
 
 -------- ERROR
 
-getErrorMessage :: String -> String
-getErrorMessage s = "Integration of " ++ s ++ " into LLVM module failed"
+getErrorMessage :: String -> Node -> String
+getErrorMessage s (Error _) = "Integration of " ++ s ++ " into LLVM module failed"
+getErrorMessage s n = "Integration of " ++ s ++ " into LLVM module failed ~ " ++ show n
