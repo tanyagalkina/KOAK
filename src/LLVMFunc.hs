@@ -409,11 +409,13 @@ argsTypeToLLVM n = error (getErrorMessage "Args Type" n)
 -------- PROTOTYPE ARGS
 
 prototypeArgsToLLVM :: Node -> ([(AST.Type, ParameterName)], AST.Type)
-prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) = (getAllParameters iats, argsTypeToLLVM at)
+prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) =
+    (getAllParameters iats, argsTypeToLLVM at)
 prototypeArgsToLLVM n = error (getErrorMessage "Prototype Args" n)
 
 getAllParameters :: [(Node, Node)] -> [(AST.Type, ParameterName)]
-getAllParameters (((Node _ (VIdentifier s)), at): iats) = ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
+getAllParameters (((Node _ (VIdentifier s)), at): iats) =
+    ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
 getAllParameters [] = []
 getAllParameters _ = error (getErrorMessage "Prototype Args" (Error ""))
 
@@ -433,13 +435,9 @@ defsToLLVM (Node _ (VDefs p es)) = mdo
         let params  = (Map.fromList [("hello", (int32 1))])
         -- runReaderT (Map.insert (getIdentifier p) (head args)) $ exprsToLLVM es
         res <- runReaderT (exprsToLLVM es) params
-        ret  res
+        ret res
     return fn
 defsToLLVM n = error (getErrorMessage "Defs" n)
-
--- _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
---         res <- runReaderT (compileInstrs instr) state
---         ret res
 
 -------- ERROR
 
