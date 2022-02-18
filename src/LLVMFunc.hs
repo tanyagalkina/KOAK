@@ -124,7 +124,7 @@ getIdentifierName n = error ("Recuperation of Identifier string failed" ++ show 
 -------- PRIMARY
 
 primaryToLLVM :: Node -> Codegen Operand
-primaryToLLVM (Node _ (VPrimary (Node _ (VLiteral n)))) = litToLLVM n
+primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
 primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
     loadIdentifier name
 primaryToLLVM n = error ((getErrorMessage "Primary") ++ show n)
@@ -144,7 +144,7 @@ loadIdentifier name = do
 -------- POSTFIX
 
 postfixToLLVM :: Node -> Codegen Operand
-postfixToLLVM (Node _ (VPostfix (Node _ (VPrimary n)) (Node _ VNothing))) =
+postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
 postfixToLLVM n = error ((getErrorMessage "Postfix") ++ show n)
 
@@ -291,10 +291,10 @@ minusToLLVM u = mdo
 
 generateMinusOne :: Node
 generateMinusOne =
-    Node TUndefine
-        (VUnary (Node TUndefine
-            (VPostfix (Node TUndefine
-                (VPrimary (Node TUndefine
+    Node TInteger
+        (VUnary (Node TInteger
+            (VPostfix (Node TInteger
+                (VPrimary (Node TInteger
                     (VLiteral (Node TInteger
                         (VDecimalConst (-1)))))))
                 (Node TNone VNothing)))

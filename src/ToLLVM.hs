@@ -27,9 +27,6 @@ import Control.Monad.Reader (ReaderT (runReaderT))
 
 -- IMPORT DATA
 
-import LLVMFunc as F
-import Data (Value(VDecimalConst, VDoubleConst, VExpr, VExprs), AST, Node (..), Codegen)
-import qualified Control.Applicative()
 import qualified Data.IntMap()
 import qualified Data.Map as Map
 
@@ -43,7 +40,7 @@ import System.Process
 -- OUR IMPORTS
 
 import LLVMFunc as F
-import Data (Value(VExpr), AST, Node (..), Codegen)
+import Data (Value(VExpr, VExprs), AST, Node (..), Codegen)
 
 
 astToLLVM :: AST -> IO ()
