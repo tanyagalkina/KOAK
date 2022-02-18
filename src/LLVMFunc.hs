@@ -161,17 +161,10 @@ unaryToLLVM _ = error "Unknown type"
 
 -------- EXPR
 
-exprsToLLVM :: [Node] -> Codegen Operand
-exprsToLLVM [] = return $ int32 0
-exprsToLLVM [x] = exprToLLVM x
-exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
-
 exprToLLVM :: Node -> Codegen Operand
 exprToLLVM (Node _ (VExpr v ((op, v'):_))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
 exprToLLVM n = error (getErrorMessage "Expr" ++ show n)
-
-
 
 -------- BINOP
 
@@ -339,7 +332,7 @@ generateMinusOne =
                 (Node TNone VNothing)))
             (Node TNone VNothing))
 
--- STMT
+-------- WHILE
 
 whileToLLVM :: Node -> Node -> Codegen ()
 whileToLLVM cond instrs = mdo
@@ -357,6 +350,12 @@ whileToLLVM cond instrs = mdo
     endBlock <- block `named` "loop.end"
     pure ()
 
+-------- EXPRS
+
+exprsToLLVM :: [Node] -> Codegen Operand
+exprsToLLVM [] = return $ int32 0
+exprsToLLVM [x] = exprToLLVM x
+exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
 
 -------- ERROR
 
