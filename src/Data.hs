@@ -144,7 +144,7 @@ data Unop = Not | Minus
 -- Where store info to get through out theAST
 data CompilerState = CompilerState {
   val :: Int,
-  x :: Int
+  y :: Int
 }
 
 type AssignedValues = Map String Operand
