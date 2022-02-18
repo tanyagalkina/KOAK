@@ -72,94 +72,107 @@ import Prelude hiding (mod)
 
 -- OUT IMPORTS
 
-import Data (Value (..), Binop (..), Type (..), AST, Node (..), Codegen, Unop (..))
+import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..))
 import MyLLVM (store', load')
 
 
 -------- GET PART OF NODE
 
-nodeToVal :: AST -> Value
+nodeToVal :: Node -> Value
 nodeToVal (Node _ v) = v
-nodeToVal _ = error "Error node"
+nodeToVal (Error s) = error s
 
-nodeToType :: AST -> Data.Type
+nodeToType :: Node -> Data.Type
 nodeToType (Node t _) = t
-nodeToType _ = error "Error node"
+nodeToType (Error s) = error s
 
---------- TMP
+-------- DECIMAL CONST
 
-nodeToValTmp :: Node -> Value
-nodeToValTmp (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary (Node _ (VLiteral (Node _ val))))) _)) _)) = val
-nodeToValTmp _ = error "Node to number conversion failed"
+decimalConstToLLVM :: Node -> Codegen Operand
+decimalConstToLLVM (Node TInteger (VDecimalConst d)) =
+    return (int32 $ toInteger d)
+decimalConstToLLVM _ = error (getErrorMessage "Decimal Const")
+
+doubleConstToLLVM :: Node -> Codegen Operand
+doubleConstToLLVM (Node TInteger (VDoubleConst d)) =
+    pure $ ConstantOperand (Float (LLVM.AST.Float.Double d))
+doubleConstToLLVM _ = error (getErrorMessage "Double Const")
 
 -------- LITERAL
 
 litToLLVM :: Node -> Codegen Operand
-litToLLVM (Node TInteger (VDecimalConst v)) = return (int32 $ toInteger v)
-litToLLVM (Node TDouble (VDoubleConst v)) =
-    pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
-litToLLVM _ = error "Unknown type"
+litToLLVM (Node TInteger (VLiteral n)) = decimalConstToLLVM n
+litToLLVM (Node TDouble (VLiteral n)) = doubleConstToLLVM n
+litToLLVM _ = error (getErrorMessage "Literal")
 
-valueToLLVM :: Value -> Codegen Operand
-valueToLLVM (VDecimalConst v) = return (int32 $ toInteger v)
-valueToLLVM (VDoubleConst v) =
-    pure $ ConstantOperand (Float (LLVM.AST.Float.Double v))
-valueToLLVM _ = error "Unknown type"
+-------- IDENTIFIER
+
+getIdentifierName :: Node -> String 
+getIdentifierName (Node _
+                      (VUnary (Node _
+                          (VPostfix (Node _
+                              (VPrimary (Node _
+                                  (VIdentifier s))))
+                              (Node TNone VNothing)))
+                          (Node TNone VNothing))) = s
+getIdentifierName _ = error "Recuperation of Identifier string failed"
 
 -------- PRIMARY
 
 primaryToLLVM :: Node -> Codegen Operand
-primaryToLLVM (Node _ (VLiteral v)) = litToLLVM v
-primaryToLLVM (Node _ (VIdentifier name)) = loadIdentifier name
-primaryToLLVM _ = error "Unkown type"
+primaryToLLVM (Node _ (VPrimary (Node _ (VLiteral n)))) = litToLLVM n
+primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
+    loadIdentifier name
+primaryToLLVM _ = error (getErrorMessage "Primary")
 
 loadIdentifier :: String -> Codegen Operand
 loadIdentifier name = do
-                    variables <- ask
-                    case variables Map.!? name of
-                        Just v -> do
-                                -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
-                                load' v
-                        Nothing -> valueToLLVM (VDecimalConst 42)
+    variables <- ask
+    case variables Map.!? name of
+        Just v -> do
+                -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
+                load' v
+        Nothing -> decimalConstToLLVM (Node TInteger (VDecimalConst 42))
 
 -------- POSTFIX
 
 postfixToLLVM :: Node -> Codegen Operand
-postfixToLLVM (Node _ (VPrimary v)) = primaryToLLVM v
-postfixToLLVM _ = error "Unkown Type"
+postfixToLLVM (Node _ (VPostfix (Node _ (VPrimary n)) (Node _ VNothing))) =
+    primaryToLLVM n
+postfixToLLVM _ = error (getErrorMessage "Postfix")
 
 -------- EXPR
 
 exprToLLVM :: Node -> Codegen Operand
 exprToLLVM (Node _ (VExpr v ((op, v'):_))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
-exprToLLVM _ = error "Unkown type"
+exprToLLVM _ = error (getErrorMessage "Expr")
 
 -------- BINOP
 
 {-
     Operator -> Value 1 -> Value 2 -> result
 -}
-binopToLLVM :: AST -> AST -> AST -> Codegen Operand
-binopToLLVM op v v' = case nodeToVal op of
-  (VBinop Data.Gt) -> gtToLLVM (nodeToValTmp v) (nodeToValTmp v')
-  (VBinop Data.Lt) -> ltToLLVM (nodeToValTmp v) (nodeToValTmp v')
-  (VBinop Data.Eq) -> eqToLLVM (nodeToValTmp v) (nodeToValTmp v')
-  (VBinop Data.Neq) -> neqToLLVM (nodeToValTmp v) (nodeToValTmp v')
-  (VBinop Data.Assign) -> assignToLLVM (nodeToValTmp v) (nodeToValTmp v')
-  (VBinop op') -> opToLLVM op' (nodeToValTmp v) (nodeToValTmp v')
-  _ -> error "Unknown Type"
+binopToLLVM :: Node -> Node -> Node -> Codegen Operand
+binopToLLVM b u u' = case nodeToVal b of
+  (VBinop Data.Gt) -> gtToLLVM u u'
+  (VBinop Data.Lt) -> ltToLLVM u u'
+  (VBinop Data.Eq) -> eqToLLVM u u'
+  (VBinop Data.Neq) -> neqToLLVM u u'
+  (VBinop Data.Assign) -> assignToLLVM u u'
+  (VBinop op') -> opToLLVM op' u u'
+  _ -> error (getErrorMessage "Binop")
 
-opToLLVM :: Binop -> Value -> Value -> Codegen Operand
-opToLLVM op a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
+opToLLVM :: Binop -> Node -> Node -> Codegen Operand
+opToLLVM op u u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
     br addBlock
 
     addBlock <- block `named` "opBlock"
     -- myPuts <- extern "puts" [ptr i8] i32
     -- plouf <- LLVM.IRBuilder.Instruction.call myPuts []
-    res <- fct op a' b'
+    res <- fct op a b
     -- a2 <- valueToLLVM (VDecimalConst 0)
     -- b2 <- valueToLLVM (VDecimalConst 0)
     -- test <- add a2 b2
@@ -171,72 +184,90 @@ opToLLVM op a b = mdo
         fct Data.Div = sdiv
         fct _ = error "Wrong Binop"
 
-gtToLLVM :: Value -> Value  -> Codegen Operand
-gtToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
+gtToLLVM :: Node -> Node  -> Codegen Operand
+gtToLLVM u u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
     br subBlock
 
     subBlock <- block `named` "gtBlock"
-    res <- icmp Sicmp.SGT a' b'
+    res <- icmp Sicmp.SGT a b
     return res
 
-ltToLLVM :: Value -> Value  -> Codegen Operand
-ltToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
+ltToLLVM :: Node -> Node  -> Codegen Operand
+ltToLLVM u u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
     br subBlock
 
     subBlock <- block `named` "ltBlock"
-    res <- icmp Sicmp.SLT a' b'
+    res <- icmp Sicmp.SLT a b
     return res
 
-eqToLLVM :: Value -> Value  -> Codegen Operand
-eqToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
+eqToLLVM :: Node -> Node  -> Codegen Operand
+eqToLLVM u u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
     br subBlock
 
     subBlock <- block `named` "eqBlock"
-    res <- icmp Sicmp.EQ  a' b'
+    res <- icmp Sicmp.EQ  a b
     return res
 
-neqToLLVM :: Value -> Value  -> Codegen Operand
-neqToLLVM a b = mdo
-    a' <- valueToLLVM a
-    b' <- valueToLLVM b
+neqToLLVM :: Node -> Node  -> Codegen Operand
+neqToLLVM u u' = mdo
+    a <- unaryToLLVM u
+    b <- unaryToLLVM u'
     br subBlock
 
     subBlock <- block `named` "neqBlock"
-    res <- icmp Sicmp.NE a' b'
+    res <- icmp Sicmp.NE a b
     return res
 
-assignToLLVM :: Value -> Value  -> Codegen Operand
-assignToLLVM (VIdentifier varName) varValue = mdo
-    val <- valueToLLVM varValue
+assignToLLVM :: Node -> Node -> Codegen Operand
+assignToLLVM i u = mdo
+    val <- unaryToLLVM u
     br assignBlock
 
     assignBlock <- block `named` "assignBlock"
-    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString varName
+    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0
+        `named` fromString (getIdentifierName i)
     store' ptr val
-    let _ = Map.insert varName ptr
+    let _ = Map.insert (getIdentifierName i) ptr
     load' ptr
-assignToLLVM _ _ = error "Unknown type"
+
+------- UNARY
+
+unaryToLLVM :: Node -> Codegen Operand
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) =
+    minusToLLVM u
+unaryToLLVM (Node _ (VUnary p (Node _ VNothing))) = postfixToLLVM p
+unaryToLLVM _ = error "Unknown type"
 
 ------- UNOP
 
-unaryToLLVM :: Node -> Codegen Operand
-unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) val')) =
-    minusToLLVM (nodeToValTmp val')
-unaryToLLVM (Node _ (VUnary post (Node TNone VNothing))) = postfixToLLVM post
-unaryToLLVM _ = error "Unknown type"
-
-minusToLLVM :: Value -> Codegen Operand
-minusToLLVM v = mdo
-    res <- opToLLVM Data.Mul v (VDecimalConst $ -1)
+minusToLLVM :: Node -> Codegen Operand
+minusToLLVM u = mdo
+    res <- opToLLVM Data.Mul u generateMinusOne
     return res
+
+generateMinusOne :: Node
+generateMinusOne =
+    Node TUndefine
+        (VUnary (Node TUndefine
+            (VPostfix (Node TUndefine
+                (VPrimary (Node TUndefine
+                    (VLiteral (Node TInteger
+                        (VDecimalConst (-1)))))))
+                (Node TNone VNothing)))
+            (Node TNone VNothing))
 
 -------- WHILE
 
 -- whileToLLVM :: Value -> Codegen Operand
 -- whileToLLVM v = undefined
+
+-------- ERROR
+
+getErrorMessage :: String -> String 
+getErrorMessage s = "Integration of " ++ s ++ " into LLVM module failed"

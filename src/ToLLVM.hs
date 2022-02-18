@@ -40,7 +40,7 @@ import System.Process
 -- OUR IMPORTS
 
 import LLVMFunc as F
-import Data (Value(VDecimalConst, VDoubleConst, VExpr), AST, Node (..), Codegen)
+import Data (Value(VExpr), AST, Node (..), Codegen)
 
 
 astToLLVM :: AST -> IO ()
@@ -68,7 +68,7 @@ compileModule' instr = do
 compileInstrs :: AST -> Codegen Operand
 -- compileInstrs instr = traverse_ compInstr where
 compileInstrs instr = case instr of
-    (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
-    (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
+    -- (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
+    -- (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
     n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
     _ -> error "Unknown value"
