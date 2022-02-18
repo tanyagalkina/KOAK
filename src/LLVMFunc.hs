@@ -335,19 +335,18 @@ generateMinusOne =
 -------- WHILE
 
 whileToLLVM :: Node -> Node -> Codegen ()
-whileToLLVM cond instrs = mdo
-    preheaderB <- block `named` "preheader"
-    let evalCond = (exprsToLLVM [cond] >>= icmp Sicmp.NE (int32 0))
-    initCondV <- evalCond `named` "initcond"
-    condBr initCondV loopB endBlock
+whileToLLVM e es = mdo
+    let evalCond = (exprsToLLVM [e] >>= icmp Sicmp.NE (int32 0))
+    initCond <- evalCond `named` "while.initCond"
+    condBr initCond loopB endBlock
 
-    loopB <- block `named` "loop.start"
-    _ <- exprsToLLVM [instrs]
+    loopB <- block `named` "while.start"
+    _ <- exprsToLLVM [es]
 
-    condV <- evalCond
-    condBr condV loopB endBlock
+    cond <- evalCond
+    condBr cond loopB endBlock
 
-    endBlock <- block `named` "loop.end"
+    endBlock <- block `named` "while.end"
     pure ()
 
 -------- EXPRS
