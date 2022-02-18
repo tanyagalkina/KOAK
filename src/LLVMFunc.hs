@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant return" #-}
+{-# HLINT ignore "Redundant bracket" #-}
 module LLVMFunc where
 
 -- IMPORT LLVM
@@ -339,6 +340,25 @@ generateMinusOne =
                         (VDecimalConst (-1)))))))
                 (Node TNone VNothing)))
             (Node TNone VNothing))
+
+-- STMT
+
+whileToLLVM :: Node -> Node -> Codegen ()
+whileToLLVM cond instrs = mdo
+    preheaderB <- block `named` "preheader"
+    let evalCond = (exprsToLLVM [cond] >>= icmp Sicmp.NE (int32 0))
+    initCondV <- evalCond `named` "initcond"
+    condBr initCondV loopB endBlock
+
+    loopB <- block `named` "loop.start"
+    _ <- exprsToLLVM [instrs]
+
+    condV <- evalCond
+    condBr condV loopB endBlock
+
+    endBlock <- block `named` "loop.end"
+    pure ()
+
 
 -------- ERROR
 
