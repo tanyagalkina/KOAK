@@ -17,11 +17,11 @@ import qualified Data.Maybe
 import CreateAST
 import Parser
 import ToLLVM (astToLLVM)
-import Data (Value(VDecimalConst, VExpr, VUnary, VPostfix, VPrimary, VLiteral, VNothing, VUnop), Node (..), Type (..), Unop (Minus))
+import Data (Value(VExprs, VDecimalConst, VExpr, VUnary, VPostfix, VPrimary, VLiteral, VNothing, VUnop, VBinop, VIdentifier), Node (..), Type (..), Unop (Minus), Binop (Assign))
 
 
 exampleExpr :: Node
-exampleExpr = Node TInteger (VExpr (Node TInteger (VUnary (Node TNone (VUnop Minus)) (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 2)))))) (Node TNone VNothing))) (Node TNone VNothing))))) [])
+exampleExpr = Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Assign),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 21)))))) (Node TNone VNothing))) (Node TNone VNothing)))]),Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [])])
 
 emptyModule :: ShortByteString -> AST.Module
 emptyModule label = AST.defaultModule {AST.moduleName = label}
@@ -36,9 +36,9 @@ process :: AST.Module -> String -> IO AST.Module
 process _ source = do
   let res = traceShow ("You gave ->" ++ source) runParser createAST source
   case res of
+      _ -> astToLLVM exampleExpr >> return initErrorModule
       Nothing -> putStrLn "SYNTAX ERROR" >> return initErrorModule
       -- Just expr -> astToLLVM (fst ex) >> return initErrorModule
-      Just _ -> astToLLVM exampleExpr >> return initErrorModule
 
 replace :: Eq b => b -> b -> [b] -> [b]
 replace a b = map $ Data.Maybe.fromMaybe b . mfilter (/= a) . Just
