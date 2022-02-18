@@ -27,6 +27,9 @@ import Control.Monad.Reader (ReaderT (runReaderT))
 
 -- IMPORT DATA
 
+import LLVMFunc as F
+import Data (Value(VDecimalConst, VDoubleConst, VExpr, VExprs), AST, Node (..), Codegen)
+import qualified Control.Applicative()
 import qualified Data.IntMap()
 import qualified Data.Map as Map
 
@@ -55,7 +58,7 @@ astToLLVM instr = do
             callCommand "gcc my.o"
             callCommand "./a.out"
             callCommand "echo $?"
-      
+
 
 compileModule' :: AST -> ModuleBuilder ()
 compileModule' instr = do
@@ -71,4 +74,5 @@ compileInstrs instr = case instr of
     -- (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
     -- (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
     n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
-    _ -> error "Unknown value"
+    (Data.Node _ (VExprs exprs)) -> F.exprsToLLVM exprs
+    _ -> error "Unknown val"

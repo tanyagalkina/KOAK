@@ -3,6 +3,8 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant return" #-}
 module LLVMFunc where
 
 -- IMPORT LLVM
@@ -74,6 +76,8 @@ import Prelude hiding (mod)
 
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..))
 import MyLLVM (store', load')
+import qualified LLVM.AST as AST
+import LLVM.AST.AddrSpace
 
 
 -------- GET PART OF NODE
@@ -103,7 +107,7 @@ doubleConstToLLVM _ = error (getErrorMessage "Double Const")
 litToLLVM :: Node -> Codegen Operand
 litToLLVM (Node TInteger (VLiteral n)) = decimalConstToLLVM n
 litToLLVM (Node TDouble (VLiteral n)) = doubleConstToLLVM n
-litToLLVM _ = error (getErrorMessage "Literal")
+litToLLVM n = error ((getErrorMessage "Literal") ++ show n)
 
 -------- IDENTIFIER
 
@@ -115,7 +119,7 @@ getIdentifierName (Node _
                                   (VIdentifier s))))
                               (Node TNone VNothing)))
                           (Node TNone VNothing))) = s
-getIdentifierName _ = error "Recuperation of Identifier string failed"
+getIdentifierName n = error ("Recuperation of Identifier string failed" ++ show n)
 
 -------- PRIMARY
 
@@ -123,30 +127,39 @@ primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VPrimary (Node _ (VLiteral n)))) = litToLLVM n
 primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
     loadIdentifier name
-primaryToLLVM _ = error (getErrorMessage "Primary")
+primaryToLLVM n = error ((getErrorMessage "Primary") ++ show n)
 
 loadIdentifier :: String -> Codegen Operand
 loadIdentifier name = do
     variables <- ask
     case variables Map.!? name of
         Just v -> do
-                -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
-                load' v
-        Nothing -> decimalConstToLLVM (Node TInteger (VDecimalConst 42))
+            -- let var = LocalReference (Type.PointerType Type.double (AddrSpace 0)) (AST.Name $ fromString name)
+            load' v
+        -- Nothing -> valueToLLVM (VDecimalConst 42)
+        Nothing -> do -- error $ "LoadIndentifier" ++ show variables
+            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString "lolilol_0")
+            load var 0
 
 -------- POSTFIX
 
 postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix (Node _ (VPrimary n)) (Node _ VNothing))) =
     primaryToLLVM n
-postfixToLLVM _ = error (getErrorMessage "Postfix")
+postfixToLLVM n = error ((getErrorMessage "Postfix") ++ show n)
 
 -------- EXPR
+
+exprsToLLVM :: [Node] -> Codegen Operand
+exprsToLLVM [] = return $ int32 0
+exprsToLLVM [x] = exprToLLVM x
+exprsToLLVM (x:xs) = exprToLLVM x  >> exprsToLLVM xs
+
 
 exprToLLVM :: Node -> Codegen Operand
 exprToLLVM (Node _ (VExpr v ((op, v'):_))) = binopToLLVM op v v'
 exprToLLVM (Node _ (VExpr v [])) = unaryToLLVM v
-exprToLLVM _ = error (getErrorMessage "Expr")
+exprToLLVM n = error ((getErrorMessage "Expr") ++ show n)
 
 -------- BINOP
 
@@ -182,7 +195,7 @@ opToLLVM op u u' = mdo
         fct Data.Sub = sub
         fct Data.Mul = mul
         fct Data.Div = sdiv
-        fct _ = error "Wrong Binop"
+        fct _ = error (getErrorMessage "Binop")
 
 gtToLLVM :: Node -> Node  -> Codegen Operand
 gtToLLVM u u' = mdo
@@ -224,17 +237,42 @@ neqToLLVM u u' = mdo
     res <- icmp Sicmp.NE a b
     return res
 
-assignToLLVM :: Node -> Node -> Codegen Operand
+assignToLLVM :: Node -> Node  -> Codegen Operand
 assignToLLVM i u = mdo
     val <- unaryToLLVM u
     br assignBlock
 
-    assignBlock <- block `named` "assignBlock"
-    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0
-        `named` fromString (getIdentifierName i)
+    assignBlock <- block `named` "assign.start"
+    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString "lolilol"
     store' ptr val
-    let _ = Map.insert (getIdentifierName i) ptr
-    load' ptr
+    -- res <- addBind varName ptr
+    -- varia <- ask
+    -- Map.insert varName ptr varia
+    withReaderT (Map.insert (getIdentifierName i) ptr) $ load' ptr
+    -- error $ "assign: " ++ show varia
+    -- return res
+
+-- assignToLLVM (VIdentifier varName) varValue = do
+--     val <- valueToLLVM varValue
+--     ptr' <- alloca Type.i32 (Just $ ConstantOperand (Int 128 4)) 8 `named` fromString varName
+--     let tmp = Map.insert varName ptr
+--     store ptr' 8 val
+--     load ptr' 8
+
+-- checkBind :: Codegen Operand -> Codegen Operand
+-- checkBind a = do
+--     a' <- ask
+--     error $ "check: " ++ show a'
+
+-- addBind :: String -> Operand -> Codegen Operand
+-- addBind name ptr' = do
+--     binds <- ask
+--     -- pure $ Map.fromList [("lol", int32 42)]
+--     -- res <- withReaderT (Map.fromList [("lol", int32 42)]) $ load' ptr'
+--     local (Map.insert name ptr') $ load' ptr'
+--     -- checkBind $ withReaderT (Map.insert name ptr') (load' ptr')
+--     -- return $( Map.insert name ptr') binds
+--     load' ptr'
 
 ------- UNARY
 
