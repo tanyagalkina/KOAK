@@ -410,11 +410,13 @@ argsTypeToLLVM n = error (getErrorMessage "Args Type" n)
 -------- PROTOTYPE ARGS
 
 prototypeArgsToLLVM :: Node -> ([(AST.Type, ParameterName)], AST.Type)
-prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) = (getAllParameters iats, argsTypeToLLVM at)
+prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) =
+    (getAllParameters iats, argsTypeToLLVM at)
 prototypeArgsToLLVM n = error (getErrorMessage "Prototype Args" n)
 
 getAllParameters :: [(Node, Node)] -> [(AST.Type, ParameterName)]
-getAllParameters (((Node _ (VIdentifier s)), at): iats) = ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
+getAllParameters (((Node _ (VIdentifier s)), at): iats) =
+    ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
 getAllParameters [] = []
 getAllParameters _ = error (getErrorMessage "Prototype Args" (Error ""))
 
