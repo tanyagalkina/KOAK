@@ -17,7 +17,7 @@ import qualified Data.Maybe
 import CreateAST
 import Parser
 import ToLLVM (astToLLVM)
-import Data (Value(VExprs, VDecimalConst, VExpr, VUnary, VPostfix, VPrimary, VLiteral, VNothing, VUnop, VBinop, VIdentifier), Node (..), Type (..), Unop (Minus), Binop (Assign))
+import Data (Value(VExprs, VDecimalConst, VExpr, VUnary, VPostfix, VPrimary, VLiteral, VNothing, VBinop, VIdentifier), Node (..), Type (..), Binop (Assign))
 
 
 exampleExpr :: Node
@@ -36,8 +36,8 @@ process :: AST.Module -> String -> IO AST.Module
 process _ source = do
   let res = traceShow ("You gave ->" ++ source) runParser createAST source
   case res of
-      _ -> astToLLVM exampleExpr >> return initErrorModule
       Nothing -> putStrLn "SYNTAX ERROR" >> return initErrorModule
+      _ -> astToLLVM exampleExpr >> return initErrorModule
       -- Just expr -> astToLLVM (fst ex) >> return initErrorModule
 
 replace :: Eq b => b -> b -> [b] -> [b]

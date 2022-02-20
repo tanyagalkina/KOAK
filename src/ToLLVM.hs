@@ -12,7 +12,6 @@ import LLVM.Module
 import LLVM.Target
 import LLVM.Relocation as R
 import LLVM.CodeModel as C
--- import LLVM.IRBuilder.Instruction
 
 import LLVM.IRBuilder as IRB
 import LLVM.IRBuilder.Module
@@ -23,7 +22,6 @@ import LLVM.AST.Type as Type
 -- IMPORT CONTROL.MONAD
 
 import Control.Monad.Reader (ReaderT (runReaderT))
--- import Control.Monad.Trans
 
 -- IMPORT DATA
 
@@ -35,12 +33,11 @@ import qualified Data.Map as Map
 import Prelude hiding (mod)
 import qualified Control.Applicative()
 import System.Process
--- import Debug.Trace
 
 -- OUR IMPORTS
 
-import LLVMFunc as F
-import Data (Value(VExpr, VExprs), AST, Node (..), Codegen)
+import LLVMFunc
+import Data (Value(VStmt), AST, Node (..), Codegen)
 
 
 astToLLVM :: AST -> IO ()
@@ -64,10 +61,6 @@ compileModule' instr = do
     pure ()
 
 compileInstrs :: AST -> Codegen Operand
--- compileInstrs instr = traverse_ compInstr where
 compileInstrs instr = case instr of
-    -- (Data.Node _ v@(VDecimalConst _)) -> F.valueToLLVM v
-    -- (Data.Node _ v@(VDoubleConst _)) -> F.valueToLLVM v
-    n@(Data.Node _ (VExpr _ _)) -> F.exprToLLVM n
-    e@(Data.Node _ (VExprs exprs)) -> F.exprsToLLVM e
-    _ -> error "Unknown val"
+    stmt@(Data.Node _ (VStmt _)) -> stmtToLLVM stmt
+    _ -> error "ERROR"

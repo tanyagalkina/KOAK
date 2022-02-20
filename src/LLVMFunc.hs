@@ -162,9 +162,11 @@ getAllArguments _ = error (getErrorMessage "Call Expr" (Error ""))
 postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
--- postfixToLLVM (Node _ (VPostfix n c)) = do
---     funcArgs <- callExprToLLVM c
---     LLVM.IRBuilder.Instruction.call
+postfixToLLVM (Node _ (VPostfix n c)) = do
+    let ptrTy = Type.PointerType i32 (AddrSpace 0)
+    let ref = GlobalReference ptrTy (fromString $ getIdentifier n)
+    funcArgs <- callExprToLLVM c
+    LLVM.IRBuilder.Instruction.call (ConstantOperand ref) funcArgs
 postfixToLLVM n = error (getErrorMessage "Postfix" n)
 
 ------- UNARY
@@ -202,12 +204,7 @@ opToLLVM op u o = mdo
     br addBlock
 
     addBlock <- block `named` "opBlock"
-    -- myPuts <- extern "puts" [ptr i8] i32
-    -- plouf <- LLVM.IRBuilder.Instruction.call myPuts []
     res <- fct op u o
-    -- a2 <- valueToLLVM (VDecimalConst 0)
-    -- b2 <- valueToLLVM (VDecimalConst 0)
-    -- test <- add a2 b2
     return res
     where
         fct Data.Add = addToLLVM
@@ -459,6 +456,22 @@ defsToLLVM n = error (getErrorMessage "Defs" n)
 
 parametersToString :: [(AST.Type, ParameterName)] -> [String]
 parametersToString list = (show . snd) <$> list
+
+-------- KDEFS
+
+kdefsToLLVM :: Node -> Codegen Operand
+kdefsToLLVM (Node _ (VKdefs es@(Node _ (VExprs _)))) = exprsToLLVM es
+kdefsToLLVM (Node _ (VKdefs (Node _ (VDefs _ _)))) = do
+    -- plouf <- defsToLLVM d
+    return $ int32 0
+kdefsToLLVM n = error (getErrorMessage "Kdefs" n)
+
+-------- STMT
+
+stmtToLLVM :: Node -> Codegen Operand
+stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : kdefss))) =
+    kdefsToLLVM kdefs >> stmtToLLVM (Node t (VStmt kdefss))
+stmtToLLVM n = error (getErrorMessage "Stmt" n)
 
 -------- ERROR
 
