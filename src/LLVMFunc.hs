@@ -6,6 +6,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant return" #-}
 {-# HLINT ignore "Redundant bracket" #-}
+{-# LANGUAGE BlockArguments #-}
 module LLVMFunc where
 
 -- IMPORT LLVM
@@ -430,12 +431,14 @@ defsToLLVM (Node _ (VDefs p es)) = mdo
     let funcName = getIdentifier p
     let (parameters, returnType) = prototypeArgsToLLVM p
     fn <- LLVM.IRBuilder.Module.function (mkName funcName) parameters returnType $ \args -> do
-        let params  = (Map.fromList [("hello", (int32 1))])
-        -- runReaderT (Map.insert (getIdentifier p) (head args)) $ exprsToLLVM es
-        res <- runReaderT (exprsToLLVM es) params
-        ret  res
+            let params = Map.fromList (zip (parametersToString parameters) args)
+            runReaderT (exprsToLLVM es) params >>= ret
     return fn
 defsToLLVM n = error (getErrorMessage "Defs" n)
+
+parametersToString :: [(AST.Type, ParameterName)] -> [String]
+parametersToString lst = aux <$> lst
+    where aux x = show $  snd x
 
 -- _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
 --         res <- runReaderT (compileInstrs instr) state
