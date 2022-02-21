@@ -79,6 +79,7 @@ import Prelude hiding (mod)
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..))
 import LLVM.AST.AddrSpace
 import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
+import Data.Data (eqT)
 
 -------- HELPER
 
@@ -317,15 +318,11 @@ generateMinusOne = unaryToLLVM (Node TInteger
                                     (Node TNone VNothing)))
 
 notToLLVM :: Node -> Codegen Operand
-notToLLVM u = mdo
-    a <- unaryToLLVM u
-    br notBlock
-
-    notBlock <- block `named` "notBlock"
-    res <- icmp Sicmp.EQ a (toIntOpe 0)
-    return res
-
-
+notToLLVM u@(Node t (VUnary _ _)) =  case t of
+    TInteger -> eqToLLVM u (toIntOpe 0)
+    TDouble  -> eqToLLVM u (toFloatOpe 0)
+    _ -> error (getErrorMessage "Not" (Error ""))
+notToLLVM _ = error (getErrorMessage "Not" (Error ""))
 
 -------- WHILE
 
