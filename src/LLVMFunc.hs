@@ -179,8 +179,8 @@ postfixToLLVM n = error (getErrorMessage "Postfix" n)
 ------- UNARY
 
 unaryToLLVM :: Node -> Codegen Operand
-unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) =
-    minusToLLVM u
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) = minusToLLVM u
+unaryToLLVM (Node _ (VUnary (Node _ (VUnop Not)) u)) = notToLLVM u
 unaryToLLVM (Node _ (VUnary p (Node _ VNothing))) = postfixToLLVM p
 unaryToLLVM _ = error "Unknown type"
 
@@ -315,6 +315,17 @@ generateMinusOne = unaryToLLVM (Node TInteger
                                                 (VDecimalConst (-1)))))))
                                         (Node TNone VNothing)))
                                     (Node TNone VNothing)))
+
+notToLLVM :: Node -> Codegen Operand
+notToLLVM u = mdo
+    a <- unaryToLLVM u
+    br notBlock
+
+    notBlock <- block `named` "notBlock"
+    res <- icmp Sicmp.EQ a (toIntOpe 0)
+    return res
+
+
 
 -------- WHILE
 
