@@ -92,6 +92,11 @@ toIntOpe x = int $ toInteger x
 toFloatOpe :: Double -> Operand
 toFloatOpe x = ConstantOperand (Float (LLVM.AST.Float.Double x))
 
+typeToLLVMType ::  Data.Type -> LLVM.AST.Type
+typeToLLVMType TInteger = Type.i32
+typeToLLVMType TDouble = Type.double
+typeToLLVMType _ = error "typeToLLVMType"
+
 -------- GET PART OF NODE
 
 nodeToVal :: Node -> Value
@@ -137,10 +142,7 @@ loadIdentifier (Node t (VIdentifier name)) = do
     case variables Map.!? name of
         Just v -> pure v
         Nothing -> do
-            let myType = case t of
-                    TInteger -> Type.i32
-                    TDouble -> Type.double
-                    _ -> error "LoadIdentifier: wrong type"
+            let myType = typeToLLVMType t
             let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
             load var 0
     where getName = AST.Name . fromString . stringToLLVMVarName
@@ -326,10 +328,7 @@ neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
 
 assignToLLVM :: Node -> Operand -> Codegen Operand
 assignToLLVM i@(Node t _) val = mdo
-    let myType = case t of
-            TInteger -> Type.i32
-            TDouble -> Type.double
-            _ -> error "Assign: unkwon type"
+    let myType = typeToLLVMType t
     br assignBlock
 
     assignBlock <- block `named` "assign.start"
