@@ -45,11 +45,10 @@ astToLLVM instr = do
     let mod = buildModule "koakModule" $ compileModule' instr
     withContext $ \ctx ->
         withModuleFromAST ctx mod $ \mod' -> do
-        let opt = None
-        withHostTargetMachine R.PIC C.Default opt $ \tm -> do
-            writeLLVMAssemblyToFile (LLVM.Module.File "my.ll") mod' -- generates an IR file
-            writeObjectToFile tm (LLVM.Module.File "my.o") mod' -- builds an object file
-            callCommand "./build.sh"
+            withHostTargetMachine R.PIC C.Default None $ \tm -> do
+                writeLLVMAssemblyToFile (LLVM.Module.File "koak.ll") mod'
+                writeObjectToFile tm (LLVM.Module.File "koak.o") mod'
+                callCommand "./build.sh"
 
 
 compileModule' :: AST -> ModuleBuilder ()

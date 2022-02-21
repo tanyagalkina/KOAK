@@ -3,10 +3,10 @@ module Data where
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified LLVM.AST.IntegerPredicate as Sicmp
-import LLVM.AST
-import LLVM.AST.Type as LType
-import LLVM.IRBuilder
-import Control.Monad.Reader
+import LLVM.AST ( Operand )
+import LLVM.AST.Type as LType ()
+import LLVM.IRBuilder ( ModuleBuilder, IRBuilderT )
+import Control.Monad.Reader ( ReaderT )
 
 -- FOR BETTER SHOW
 -- import Text.Pretty.Simple (pPrint)
@@ -113,8 +113,6 @@ data Postfix = Postfix Primary (Maybe CallExpr)
 -- '(' ( expression (',' expression ) *) ? ')'
 type CallExpr = [Expr]
 
--- EXPR OU EXPRS
-
 -- identifier | literal | '(' expressions ')'
 data Primary = PId Identifier
     | PLit Literal
@@ -141,15 +139,7 @@ data Unop = Not | Minus
     deriving (Show, Eq)
 
 -- LLVM Data
--- Where store info to get through out theAST
-data CompilerState = CompilerState {
-  val :: Int,
-  y :: Int
-}
 
 type AssignedValues = Map String Operand
 
 type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)
-
-type BinopFct = Operand -> Operand -> Codegen Operand
-type CondFct = Sicmp.IntegerPredicate

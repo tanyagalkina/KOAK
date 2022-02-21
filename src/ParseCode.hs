@@ -1,12 +1,44 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wall #-}
 module ParseCode where
 
 -- Import
 
-import Control.Applicative
+import Control.Applicative ( Alternative((<|>)) )
 
 import Parser
+    ( parseAnd,
+      parseAnyChar,
+      parseChar,
+      parseEnd,
+      parseInt,
+      parseOnlyDotDouble,
+      parseSome,
+      parseSomeOut,
+      parseString,
+      Parser )
 import Data
+    ( Unop(..),
+      Binop(..),
+      Literal(..),
+      DoubleConst,
+      DecimalConst,
+      Identifier,
+      Primary(..),
+      CallExpr,
+      Postfix(..),
+      Unary(..),
+      Expr(..),
+      WhileExpr(..),
+      IfExpr(..),
+      ForExpr(..),
+      Exprs(..),
+      ArgsType(..),
+      PrototypeArgs(..),
+      Prototype(..),
+      Defs(..),
+      Kdefs(..),
+      Stmt )
 
 -- parseStmt
 

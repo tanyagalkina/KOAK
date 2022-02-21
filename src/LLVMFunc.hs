@@ -77,7 +77,6 @@ import Prelude hiding (mod)
 -- OUT IMPORTS
 
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..))
-import MyLLVM (store', load')
 import LLVM.AST.AddrSpace
 
 -------- HELPER
@@ -299,8 +298,8 @@ assignToLLVM i val = mdo
 
     assignBlock <- block `named` "assign.start"
     ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
-    store' ptr val
-    withReaderT (Map.insert (getIdentifier i) ptr) $ load' ptr
+    myStore ptr val
+    withReaderT (Map.insert (getIdentifier i) ptr) $ myLoad ptr
 
 ------- UNOP
 
@@ -461,6 +460,20 @@ stmtToLLVM :: Node -> Codegen Operand
 stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : kdefss))) =
     kdefsToLLVM kdefs >> stmtToLLVM (Node t (VStmt kdefss))
 stmtToLLVM n = error (getErrorMessage "Stmt" n)
+
+-------- DATA MANAGEMENT
+
+myLoad :: Operand -> Codegen Operand
+myLoad adr = load adr 0
+
+myStore :: Operand -> Operand -> Codegen ()
+myStore adr = store adr 0
+
+allocate :: LLVM.AST.Type -> Operand -> Codegen Operand
+allocate ty val = do
+    adr <- alloca ty (Just (IRB.int32 1)) 0
+    myStore adr val
+    pure adr
 
 -------- ERROR
 

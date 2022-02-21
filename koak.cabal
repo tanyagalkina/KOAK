@@ -28,11 +28,9 @@ source-repository head
 library
   exposed-modules:
       Data
-      Lib
       ParseCode
       CreateAST
       LLVMFunc
-      MyLLVM
       ToLLVM
       Parser
       SrcManager
