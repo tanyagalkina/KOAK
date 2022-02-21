@@ -193,12 +193,16 @@ unaryToLLVM :: Node -> Codegen Operand
 unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) = minusToLLVM u
 unaryToLLVM (Node _ (VUnary (Node _ (VUnop Not)) u)) = notToLLVM u
 unaryToLLVM (Node _ (VUnary p (Node _ VNothing))) = postfixToLLVM p
-unaryToLLVM _ = error "Unknown type"
+unaryToLLVM n = error (getErrorMessage "Unary" n)
 
 ------- UNOP
 
 minusToLLVM :: Node -> Codegen Operand
-minusToLLVM u = generateMinusOne >>= opToLLVM Data.Mul u
+minusToLLVM u@(Node t _) = case t of
+    TInteger -> opToLLVM Data.Mul u (toIntOpe (-1))
+    TDouble -> opToLLVM Data.Mul u (toFloatOpe (-1.0))
+    _ -> error (getErrorMessage "Unary" u)
+minusToLLVM u = error (getErrorMessage "Unary" u)
 
 generateMinusOne :: Codegen Operand
 generateMinusOne = unaryToLLVM (Node TInteger
