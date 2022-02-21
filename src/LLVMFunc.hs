@@ -131,14 +131,21 @@ getIdentifier (Node _ (VPrimary (Node _ (VIdentifier s)))) = s
 getIdentifier (Node _ (VPrototype (Node _ (VIdentifier s)) _)) = s
 getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
 
-loadIdentifier :: String -> Codegen Operand
-loadIdentifier name = do
+loadIdentifier :: Node -> Codegen Operand
+loadIdentifier (Node t (VIdentifier name)) = do
     variables <- ask
     case variables Map.!? name of
         Just v -> pure v
         Nothing -> do
-            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString (stringToLLVMVarName name))
+            let myType = case t of
+                    TInteger -> Type.i32
+                    TDouble -> Type.double
+                    _ -> error "LoadIdentifier: wrong type"
+            let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
             load var 0
+    where getName = AST.Name . fromString . stringToLLVMVarName
+loadIdentifier _ = error "loadIdentifier: Unknown type"
+
 
 stringToLLVMVarName :: String -> String
 stringToLLVMVarName str = str ++ "_0"
@@ -147,8 +154,8 @@ stringToLLVMVarName str = str ++ "_0"
 
 primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
-primaryToLLVM (Node _ (VPrimary (Node _ (VIdentifier name)))) =
-    loadIdentifier name
+primaryToLLVM (Node _ (VPrimary i@(Node _ (VIdentifier _)))) =
+    loadIdentifier i
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VExprs _)))) = exprsToLLVM n
 primaryToLLVM n = error (getErrorMessage "Primary" n)
 
@@ -294,13 +301,18 @@ neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
 neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
 
 assignToLLVM :: Node -> Operand -> Codegen Operand
-assignToLLVM i val = mdo
+assignToLLVM i@(Node t _) val = mdo
+    let myType = case t of
+            TInteger -> Type.i32
+            TDouble -> Type.double
+            _ -> error "Assign: unkwon type"
     br assignBlock
 
     assignBlock <- block `named` "assign.start"
-    ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
+    ptr <- alloca myType (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
     myStore ptr val
     withReaderT (Map.insert (getIdentifier i) ptr) $ myLoad ptr
+assignToLLVM _ _ = error "Assign unknown type"
 
 ------- UNOP
 
