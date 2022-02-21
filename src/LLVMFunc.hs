@@ -137,7 +137,9 @@ loadIdentifier name = do
     case variables Map.!? name of
         Just v -> pure v
         Nothing -> do
-            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0)) (AST.Name $ fromString (stringToLLVMVarName name))
+            let var = LocalReference (Type.PointerType Type.i32 (AddrSpace 0))
+                                     (AST.Name $
+                                        fromString (stringToLLVMVarName name))
             load var 0
 
 stringToLLVMVarName :: String -> String
@@ -156,7 +158,7 @@ primaryToLLVM n = error (getErrorMessage "Primary" n)
 
 callExprToLLVM :: Node -> Codegen [(Operand, [ParameterAttribute])]
 callExprToLLVM (Node _ (VCallExpr list)) = getAllArguments list
-callExprToLLVM n = error (getErrorMessage "Call Expr" n)
+callExprToLLVM n = error (getErrorMessage "Call Expr 1" n)
 
 getAllArguments :: [Node] -> Codegen [(Operand, [ParameterAttribute])]
 getAllArguments (e@(Node _ (VExpr _ _)):rest) = do
@@ -164,7 +166,7 @@ getAllArguments (e@(Node _ (VExpr _ _)):rest) = do
     restOfArguments <- getAllArguments rest
     return ((operand, []) : restOfArguments)
 getAllArguments [] = return []
-getAllArguments _ = error (getErrorMessage "Call Expr" (Error ""))
+getAllArguments _ = error (getErrorMessage "Call Expr 2" (Error ""))
 
 -------- POSTFIX
 
@@ -185,6 +187,28 @@ unaryToLLVM (Node _ (VUnary (Node _ (VUnop Minus)) u)) = minusToLLVM u
 unaryToLLVM (Node _ (VUnary (Node _ (VUnop Not)) u)) = notToLLVM u
 unaryToLLVM (Node _ (VUnary p (Node _ VNothing))) = postfixToLLVM p
 unaryToLLVM _ = error "Unknown type"
+
+------- UNOP
+
+minusToLLVM :: Node -> Codegen Operand
+minusToLLVM u = generateMinusOne >>= opToLLVM Data.Mul u
+
+generateMinusOne :: Codegen Operand
+generateMinusOne = unaryToLLVM (Node TInteger
+                                (VUnary (Node TInteger
+                                    (VPostfix (Node TInteger
+                                        (VPrimary (Node TInteger
+                                            (VLiteral (Node TInteger
+                                                (VDecimalConst (-1)))))))
+                                        (Node TNone VNothing)))
+                                    (Node TNone VNothing)))
+
+notToLLVM :: Node -> Codegen Operand
+notToLLVM u@(Node t (VUnary _ _)) =  case t of
+    TInteger -> eqToLLVM u (toIntOpe 0)
+    TDouble  -> eqToLLVM u (toFloatOpe 0)
+    _ -> error (getErrorMessage "Not" (Error ""))
+notToLLVM _ = error (getErrorMessage "Not" (Error ""))
 
 -------- EXPR
 
@@ -275,15 +299,13 @@ ltToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
         _ ->  error (getErrorMessage "Lt" (Error ""))
 ltToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
 
-
 eqToLLVM :: Node -> Operand -> Codegen Operand
 eqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.EQ a b
-        TDouble -> fcmp OEQ  a b
+        TDouble -> fcmp OEQ a b
         _ ->  error (getErrorMessage "Eq" (Error ""))
 eqToLLVM _ _ = error (getErrorMessage "Eq" (Error ""))
-
 
 neqToLLVM :: Node -> Operand -> Codegen Operand
 neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
@@ -301,34 +323,13 @@ assignToLLVM i val = mdo
     ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
     myStore ptr val
     withReaderT (Map.insert (getIdentifier i) ptr) $ myLoad ptr
-
-------- UNOP
-
-minusToLLVM :: Node -> Codegen Operand
-minusToLLVM u = generateMinusOne >>= opToLLVM Data.Mul u
-
-generateMinusOne :: Codegen Operand
-generateMinusOne = unaryToLLVM (Node TInteger
-                                (VUnary (Node TInteger
-                                    (VPostfix (Node TInteger
-                                        (VPrimary (Node TInteger
-                                            (VLiteral (Node TInteger
-                                                (VDecimalConst (-1)))))))
-                                        (Node TNone VNothing)))
-                                    (Node TNone VNothing)))
-
-notToLLVM :: Node -> Codegen Operand
-notToLLVM u@(Node t (VUnary _ _)) =  case t of
-    TInteger -> eqToLLVM u (toIntOpe 0)
-    TDouble  -> eqToLLVM u (toFloatOpe 0)
-    _ -> error (getErrorMessage "Not" (Error ""))
-notToLLVM _ = error (getErrorMessage "Not" (Error ""))
+    
 
 -------- WHILE
 
 whileToLLVM :: Node -> Codegen Operand
 whileToLLVM (Node _ (VWhileExpr e es)) = mdo
-    let evalCond = (exprsToLLVM e >>= icmp Sicmp.NE (int32 0))
+    let evalCond = (exprToLLVM e >>= icmp Sicmp.NE (int32 0))
     initCond <- evalCond `named` "while.initCond"
     condBr initCond loopB endBlock
 

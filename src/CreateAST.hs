@@ -190,7 +190,7 @@ createPrimaryNode _ = Error "Typing of Primary failed"
 -- create Call Expr
 
 createCallExpr :: TypedId -> CallExpr -> (Value, TypedId)
-createCallExpr ti [] = (VCallExpr [createEmptyNode], ti)
+createCallExpr ti [] = (VCallExpr [], ti)
 createCallExpr ti callExpr =
     let (exprNodes, newTi) = createExprNodes ([], ti) callExpr
     in (VCallExpr exprNodes, newTi)

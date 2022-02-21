@@ -47,15 +47,37 @@ test "data/examples/numberExamples/numberExample2.koak" "2"
 test "data/examples/numberExamples/numberExample3.koak" "270198"
 test "data/examples/numberExamples/numberExample3.koak" "3.14"
 
-test "data/examples/binopExample.koak" "TO DO"
-test "data/examples/unaryExample.koak" "TO DO"
-test "data/examples/primaryExample.koak" "TO DO"
-test "data/examples/postfixExample.koak" "TO DO"
-test "data/examples/exprExample.koak" "TO DO"
-test "data/examples/whileExprExample.koak" "TO DO"
+test "data/examples/binopExamples/binopExample1.koak" "16"
+test "data/examples/binopExamples/binopExample2.koak" "3"
+test "data/examples/binopExamples/binopExample3.koak" "3.1"
+test "data/examples/binopExamples/binopExample4.koak" "2"
+test "data/examples/binopExamples/binopExample5.koak" "2"
+test "data/examples/binopExamples/binopExample6.koak" "0"
+test "data/examples/binopExamples/binopExample7.koak" "1"
+test "data/examples/binopExamples/binopExample8.koak" "1"
+test "data/examples/binopExamples/binopExample9.koak" "0"
+test "data/examples/binopExamples/binopExample10.koak" "1"
+test "data/examples/binopExamples/binopExample11.koak" "2"
+
+test "data/examples/unaryExamples/unaryExample1.koak" "0"
+#test "data/examples/unaryExamples/unaryExample2.koak" "TO DO"
+#test "data/examples/unaryExamples/unaryExample3.koak" "0"
+#test "data/examples/unaryExamples/unaryExample4.koak" "TO DO"
+#test "data/examples/unaryExamples/unaryExample5.koak" "0"
+test "data/examples/unaryExamples/unaryExample6.koak" "1"
+
+test "data/examples/primaryExamples/primaryExample.koak" "2"
+
+#test "data/examples/defsExamples/defsExample1.koak" "TO DO"
+#test "data/examples/defsExamples/defsExample2.koak" "TO DO"
+
+test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
+#test "data/examples/exprExamples/exprExample2.koak" "TO DO"
+test "data/examples/exprExamples/exprExample3.koak" "1"
+
+#test "data/examples/whileExprExample.koak" "TO DO"
 test "data/examples/ifExprExample.koak" "TO DO"
 test "data/examples/forExprExample.koak" "TO DO"
-test "data/examples/defsExample.koak" "TO DO"
 test "data/examples/subjectExample.koak" "TO DO"
 
 # FUNCTIONS

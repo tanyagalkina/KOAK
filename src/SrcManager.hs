@@ -39,8 +39,9 @@ process :: AST.Module -> String -> IO AST.Module
 process _ source = do
   let res = runParser createAST source
   case res of
-      Nothing -> putStrLn "Syntax Error" >> return initErrorModule
-      Just (Error s, _) -> putStrLn s >> return initErrorModule
+      Nothing -> putStrLn "ERROR : Syntax Error" >> return initErrorModule
+      Just (Error s, _) -> putStr "ERROR : " >> putStrLn s
+                                               >> return initErrorModule
       Just (ast, _) -> astToLLVM ast >> return initModule
 
 -- process files
