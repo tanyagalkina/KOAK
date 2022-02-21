@@ -1,10 +1,10 @@
+{-# OPTIONS_GHC -Wall #-}
 module Main where
 
 import Prelude hiding (mod)
 import System.Environment ( getArgs )
 import qualified Control.Monad.Cont
 
-import ToLLVM (astToLLVM)
 import SrcManager ( processFiles, repl )
 
 main :: IO ()

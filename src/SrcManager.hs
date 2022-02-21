@@ -6,7 +6,6 @@
 module SrcManager where
 
 import Prelude hiding (mod)
-import Debug.Trace
 import Data.ByteString.Short
 import qualified LLVM.AST as AST
 import System.Console.Haskeline

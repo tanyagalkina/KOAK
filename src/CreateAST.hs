@@ -7,10 +7,36 @@ module CreateAST where
 
 import qualified Data.Map as Map
 
-import Parser
+import Parser ( Parser )
 
 import Data
-import ParseCode
+    ( Unop,
+      Binop(Assign),
+      Literal(..),
+      DoubleConst,
+      DecimalConst,
+      Identifier,
+      Primary(..),
+      CallExpr,
+      Postfix(..),
+      Unary(..),
+      Expr(..),
+      WhileExpr(..),
+      IfExpr(..),
+      ForExpr(..),
+      Exprs(..),
+      ArgsType(..),
+      PrototypeArgs(..),
+      Prototype(..),
+      Defs(..),
+      Kdefs(..),
+      Stmt,
+      TypedId,
+      Value(..),
+      Type(..),
+      Node(..),
+      AST )
+import ParseCode ( parseStmt )
 
 -- create AST / EDITABLE
 
