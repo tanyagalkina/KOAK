@@ -446,8 +446,10 @@ kdefsToLLVM n = error (getErrorMessage "Kdefs" n)
 -------- STMT
 
 stmtToLLVM :: Node -> Codegen Operand
-stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : kdefss))) =
-    kdefsToLLVM kdefs >> stmtToLLVM (Node t (VStmt kdefss))
+stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : rest))) =
+    case rest of
+        [] -> kdefsToLLVM kdefs
+        _ -> kdefsToLLVM kdefs >> stmtToLLVM (Node t (VStmt rest))
 stmtToLLVM n = error (getErrorMessage "Stmt" n)
 
 -------- DATA MANAGEMENT

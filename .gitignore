@@ -1,5 +1,5 @@
 koak
 .stack-work
-my.ll
-my.o
+koak.ll
+koak.o
 a.out
