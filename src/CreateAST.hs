@@ -317,7 +317,7 @@ createForExpr ti (ForExpr (i1, e1) (i2, e2) e es) =
             createExpr (addNewTypedId i1 (getNodeType exprNode1) newTi1) e2
         exprNode2 = createExprNode expr2
         (expr, newTi) =
-            createExpr (addNewTypedId i1 (getNodeType exprNode1) newTi2) e
+            createExpr newTi2 e
         (exprs, newTi3) = createExprs newTi es
 
 createForExprNode :: Value -> Node
