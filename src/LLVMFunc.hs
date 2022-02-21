@@ -79,7 +79,7 @@ import Prelude hiding (mod)
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..))
 import LLVM.AST.AddrSpace
 import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
-import Data.Data (eqT)
+
 
 -------- HELPER
 
