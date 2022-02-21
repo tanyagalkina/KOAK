@@ -34,11 +34,11 @@ initModule = emptyModule "koakModule"
 
 process :: AST.Module -> String -> IO AST.Module
 process _ source = do
-  let res = traceShow ("You gave ->" ++ source) runParser createAST source
+  let res = runParser createAST source
   case res of
-      Nothing -> putStrLn "SYNTAX ERROR" >> return initErrorModule
-      _ -> astToLLVM exampleExpr >> return initErrorModule
-      -- Just expr -> astToLLVM (fst ex) >> return initErrorModule
+      Nothing -> putStrLn "Syntax Error" >> return initErrorModule
+      Just (Error s, _) -> putStrLn s >> return initErrorModule
+      _ -> astToLLVM exampleExpr >> return initModule
 
 replace :: Eq b => b -> b -> [b] -> [b]
 replace a b = map $ Data.Maybe.fromMaybe b . mfilter (/= a) . Just
@@ -46,11 +46,12 @@ replace a b = map $ Data.Maybe.fromMaybe b . mfilter (/= a) . Just
 concatSources :: String -> [String] -> IO String
 concatSources base [] = return base
 concatSources base (x:xs) = do
-                     src <- readFile x
-                     let cleanSource = replace '\n' ' ' src
-                     concatSources (base ++ cleanSource) xs
+    src <- readFile x
+    let cleanSource = replace '\n' ' ' src
+    concatSources (base ++ cleanSource) xs
 
--- maybe add error handling ?
+-- Add error handling ?
+
 processFiles :: [String] -> IO AST.Module
 processFiles fnames = concatSources "" fnames >>= process initModule
 
@@ -58,10 +59,10 @@ repl :: IO ()
 repl = traceShow ("KOAK Version 1.0.0\nCopyright 2021-2022 Epitech Roazhon, Inc." :: [Char])
                  runInputT defaultSettings (loop initModule)
     where
-    loop mod = do
-        minput <- getInputLine "koak> "
-        case minput of
-            Nothing -> outputStrLn "Goodbye."
-            Just input -> do
-                modn <- liftIO $ process mod input
-                loop modn
+        loop mod = do
+            minput <- getInputLine "koak> "
+            case minput of
+                Nothing -> outputStrLn "Goodbye."
+                Just input -> do
+                    modn <- liftIO $ process mod input
+                    loop modn
