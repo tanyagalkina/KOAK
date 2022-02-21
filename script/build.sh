@@ -1,3 +1,3 @@
-gcc my.o
+gcc koak.o
 ./a.out
 echo $?

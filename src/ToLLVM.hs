@@ -48,7 +48,7 @@ astToLLVM instr = do
             withHostTargetMachine R.PIC C.Default None $ \tm -> do
                 writeLLVMAssemblyToFile (LLVM.Module.File "koak.ll") mod'
                 writeObjectToFile tm (LLVM.Module.File "koak.o") mod'
-                callCommand "./build.sh"
+                callCommand "./script/build.sh"
 
 
 compileModule' :: AST -> ModuleBuilder ()

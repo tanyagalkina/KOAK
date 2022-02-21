@@ -43,7 +43,7 @@ import Data
 -- parseStmt
 
 parseStmt :: Parser Stmt
-parseStmt = parseSome parseKdefs <* parseEnd
+parseStmt = parseSome parseKdefs <* parseWithSpaces parseEnd
 
 -- parseKdefs
 
