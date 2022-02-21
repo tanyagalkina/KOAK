@@ -78,6 +78,8 @@ import Prelude hiding (mod)
 
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..))
 import LLVM.AST.AddrSpace
+import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
+import Data.Data (eqT)
 
 -------- HELPER
 
@@ -257,40 +259,39 @@ divToLLVM u@(Node t (VUnary _ _)) b = mdo
 divToLLVM _ _ = error (getErrorMessage "Div" (Error ""))
 
 gtToLLVM :: Node -> Operand -> Codegen Operand
-gtToLLVM u b = mdo
-    a <- unaryToLLVM u
-    br subBlock
+gtToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.SGT a b
+        TDouble -> fcmp OGT a b
+        _ ->  error (getErrorMessage "Gt" (Error ""))
+gtToLLVM _ _ = error (getErrorMessage "Gt" (Error ""))
 
-    subBlock <- block `named` "gtBlock"
-    res <- icmp Sicmp.SGT a b
-    return res
 
 ltToLLVM :: Node -> Operand -> Codegen Operand
-ltToLLVM u b = mdo
-    a <- unaryToLLVM u
-    br subBlock
+ltToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.SLT a b
+        TDouble -> fcmp OLT  a b
+        _ ->  error (getErrorMessage "Lt" (Error ""))
+ltToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
 
-    subBlock <- block `named` "ltBlock"
-    res <- icmp Sicmp.SLT a b
-    return res
 
 eqToLLVM :: Node -> Operand -> Codegen Operand
-eqToLLVM u b = mdo
-    a <- unaryToLLVM u
-    br subBlock
+eqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.EQ a b
+        TDouble -> fcmp OEQ  a b
+        _ ->  error (getErrorMessage "Eq" (Error ""))
+eqToLLVM _ _ = error (getErrorMessage "Eq" (Error ""))
 
-    subBlock <- block `named` "eqBlock"
-    res <- icmp Sicmp.EQ  a b
-    return res
 
 neqToLLVM :: Node -> Operand -> Codegen Operand
-neqToLLVM u b = mdo
-    a <- unaryToLLVM u
-    br subBlock
-
-    subBlock <- block `named` "neqBlock"
-    res <- icmp Sicmp.NE a b
-    return res
+neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.NE a b
+        TDouble -> fcmp ONE  a b
+        _ ->  error (getErrorMessage "Neq" (Error ""))
+neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
 
 assignToLLVM :: Node -> Operand -> Codegen Operand
 assignToLLVM i val = mdo
@@ -317,15 +318,11 @@ generateMinusOne = unaryToLLVM (Node TInteger
                                     (Node TNone VNothing)))
 
 notToLLVM :: Node -> Codegen Operand
-notToLLVM u = mdo
-    a <- unaryToLLVM u
-    br notBlock
-
-    notBlock <- block `named` "notBlock"
-    res <- icmp Sicmp.EQ a (toIntOpe 0)
-    return res
-
-
+notToLLVM u@(Node t (VUnary _ _)) =  case t of
+    TInteger -> eqToLLVM u (toIntOpe 0)
+    TDouble  -> eqToLLVM u (toFloatOpe 0)
+    _ -> error (getErrorMessage "Not" (Error ""))
+notToLLVM _ = error (getErrorMessage "Not" (Error ""))
 
 -------- WHILE
 
