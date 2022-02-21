@@ -80,6 +80,16 @@ import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), A
 import MyLLVM (store', load')
 import LLVM.AST.AddrSpace
 
+-------- HELPER
+
+int :: Integer -> Operand
+int = int32
+
+toIntOpe :: Int -> Operand
+toIntOpe x = int $ toInteger x
+
+toFloatOpe :: Double -> Operand
+toFloatOpe x = ConstantOperand (Float (LLVM.AST.Float.Double x))
 
 -------- GET PART OF NODE
 
@@ -94,15 +104,13 @@ nodeToType (Error s) = error s
 -------- DECIMAL CONST
 
 decimalConstToLLVM :: Node -> Codegen Operand
-decimalConstToLLVM (Node TInteger (VDecimalConst d)) =
-    return (int32 $ toInteger d)
+decimalConstToLLVM (Node TInteger (VDecimalConst d)) = return $ toIntOpe d
 decimalConstToLLVM n = error (getErrorMessage "Decimal Const" n)
 
 -------- DOUBLE CONST
 
 doubleConstToLLVM :: Node -> Codegen Operand
-doubleConstToLLVM (Node TDouble (VDoubleConst d)) =
-    pure $ ConstantOperand (Float (LLVM.AST.Float.Double d))
+doubleConstToLLVM (Node TDouble (VDoubleConst d)) = pure $ toFloatOpe d
 doubleConstToLLVM n = error (getErrorMessage "Double Const" n)
 
 -------- LITERAL
@@ -292,42 +300,12 @@ assignToLLVM i val = mdo
     assignBlock <- block `named` "assign.start"
     ptr <- alloca Type.i32 (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
     store' ptr val
-    -- res <- addBind varName ptr
-    -- varia <- ask
-    -- Map.insert varName ptr varia
     withReaderT (Map.insert (getIdentifier i) ptr) $ load' ptr
-    -- error $ "assign: " ++ show varia
-    -- return res
-
--- assignToLLVM (VIdentifier varName) varValue = do
---     val <- valueToLLVM varValue
---     ptr' <- alloca Type.i32 (Just $ ConstantOperand (Int 128 4)) 8 `named` fromString varName
---     let tmp = Map.insert varName ptr
---     store ptr' 8 val
---     load ptr' 8
-
--- checkBind :: Codegen Operand -> Codegen Operand
--- checkBind a = do
---     a' <- ask
---     error $ "check: " ++ show a'
-
--- addBind :: String -> Operand -> Codegen Operand
--- addBind name ptr' = do
---     binds <- ask
---     -- pure $ Map.fromList [("lol", int32 42)]
---     -- res <- withReaderT (Map.fromList [("lol", int32 42)]) $ load' ptr'
---     local (Map.insert name ptr') $ load' ptr'
---     -- checkBind $ withReaderT (Map.insert name ptr') (load' ptr')
---     -- return $( Map.insert name ptr') binds
---     load' ptr'
 
 ------- UNOP
 
 minusToLLVM :: Node -> Codegen Operand
-minusToLLVM u = mdo
-    minusOne <- generateMinusOne
-    res <- opToLLVM Data.Mul u minusOne
-    return res
+minusToLLVM u = generateMinusOne >>= opToLLVM Data.Mul u
 
 generateMinusOne :: Codegen Operand
 generateMinusOne = unaryToLLVM (Node TInteger
