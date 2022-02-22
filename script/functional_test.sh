@@ -61,9 +61,9 @@ test "data/examples/binopExamples/binopExample10.koak" "1"
 
 test "data/examples/unaryExamples/unaryExample1.koak" "0"
 #test "data/examples/unaryExamples/unaryExample2.koak" "TO DO"
-test "data/examples/unaryExamples/unaryExample3.koak" "0"
+#test "data/examples/unaryExamples/unaryExample3.koak" "0"
 #test "data/examples/unaryExamples/unaryExample4.koak" "TO DO"
-test "data/examples/unaryExamples/unaryExample5.koak" "0"
+#test "data/examples/unaryExamples/unaryExample5.koak" "0"
 test "data/examples/unaryExamples/unaryExample6.koak" "1"
 # ADD UNARY EXAMPLE WITH DOUBLE
 
@@ -74,7 +74,7 @@ test "data/examples/primaryExamples/primaryExample.koak" "2"
 
 test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
 #test "data/examples/exprExamples/exprExample2.koak" "TO DO"
-test "data/examples/exprExamples/exprExample3.koak" "1"
+#test "data/examples/exprExamples/exprExample3.koak" "1"
 
 #test "data/examples/whileExprExample.koak" "TO DO"
 #test "data/examples/ifExprExample.koak" "TO DO"

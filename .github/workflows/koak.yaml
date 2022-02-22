@@ -25,3 +25,26 @@ jobs :
         with:
           name: unit_test_output
           path: unit_test_output
+  functional-test :
+    runs-on : ubuntu-latest
+    steps :
+      - name : Checkout repo
+        uses : actions/checkout@v2
+      - name: Permissions bug workaround
+        run: "chown -R $(id -un):$(id -gn) ~"
+      - name: Install llvm
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y llvm-9-dev
+      - name : Make
+        run : make
+      - name : Run functional test
+        run : ./functional_test.sh > functional_test_output
+      - name : Clean
+        run : make fclean
+      - name : Upload file
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: functional_test_output
+          path: functional_test_output
