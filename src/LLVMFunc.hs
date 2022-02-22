@@ -216,8 +216,8 @@ generateMinusOne = unaryToLLVM (Node TInteger
 
 notToLLVM :: Node -> Codegen Operand
 notToLLVM u@(Node t (VUnary _ _)) =  case t of
-    TInteger -> eqToLLVM u (toIntOpe 0)
-    TDouble  -> eqToLLVM u (toFloatOpe 0)
+    TInteger -> eqToLLVM u (bit 0)
+    TDouble  -> eqToLLVM u (bit 0)
     _ -> error (getErrorMessage "Not" (Error ""))
 notToLLVM _ = error (getErrorMessage "Not" (Error ""))
 
