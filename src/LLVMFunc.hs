@@ -146,7 +146,7 @@ loadIdentifier (Node t (VIdentifier name)) = do
             let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
             load var 0
     where getName = AST.Name . fromString . stringToLLVMVarName
-loadIdentifier _ = error "loadIdentifier: Unknown type"
+loadIdentifier n = error (getErrorMessage "Identifier" n)
 
 
 stringToLLVMVarName :: String -> String
@@ -165,7 +165,7 @@ primaryToLLVM n = error (getErrorMessage "Primary" n)
 
 callExprToLLVM :: Node -> Codegen [(Operand, [ParameterAttribute])]
 callExprToLLVM (Node _ (VCallExpr list)) = getAllArguments list
-callExprToLLVM n = error (getErrorMessage "Call Expr 1" n)
+callExprToLLVM n = error (getErrorMessage "Call Expr" n)
 
 getAllArguments :: [Node] -> Codegen [(Operand, [ParameterAttribute])]
 getAllArguments (e@(Node _ (VExpr _ _)):rest) = do
@@ -173,7 +173,7 @@ getAllArguments (e@(Node _ (VExpr _ _)):rest) = do
     restOfArguments <- getAllArguments rest
     return ((operand, []) : restOfArguments)
 getAllArguments [] = return []
-getAllArguments _ = error (getErrorMessage "Call Expr 2" (Error ""))
+getAllArguments _ = error (getErrorMessage "Call Expr" (Error ""))
 
 -------- POSTFIX
 
