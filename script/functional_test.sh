@@ -57,7 +57,7 @@ test "data/examples/binopExamples/binopExample7.koak" "1"
 test "data/examples/binopExamples/binopExample8.koak" "1"
 test "data/examples/binopExamples/binopExample9.koak" "0"
 test "data/examples/binopExamples/binopExample10.koak" "1"
-#test "data/examples/binopExamples/binopExample11.koak" "2"
+test "data/examples/binopExamples/binopExample11.koak" "2"
 
 test "data/examples/unaryExamples/unaryExample1.koak" "0"
 #test "data/examples/unaryExamples/unaryExample2.koak" "TO DO"
@@ -77,7 +77,10 @@ test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
 #test "data/examples/exprExamples/exprExample3.koak" "1"
 
 #test "data/examples/whileExprExample.koak" "TO DO"
-#test "data/examples/ifExprExample.koak" "TO DO"
+
+test "data/examples/ifExprExamples/ifExprExample1.koak" "2"
+test "data/examples/ifExprExamples/ifExprExample2.koak" "1"
+
 #test "data/examples/forExprExample.koak" "TO DO"
 #test "data/examples/subjectExample.koak" "TO DO"
 
