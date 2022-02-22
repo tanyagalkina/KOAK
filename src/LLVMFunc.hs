@@ -360,7 +360,7 @@ assignToLLVM _ _ = error "Assign unknown type"
 
 whileToLLVM :: Node -> Codegen Operand
 whileToLLVM (Node _ (VWhileExpr e es)) = mdo
-    let evalCond = (exprToLLVM e >>= icmp Sicmp.NE (int32 0))
+    let evalCond = (exprToLLVM e >>= icmp Sicmp.NE (bit 0))
     initCond <- evalCond `named` "while.initCond"
     condBr initCond loopB endBlock
 
