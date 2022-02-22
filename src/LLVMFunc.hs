@@ -80,6 +80,7 @@ import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), A
 import LLVM.AST.AddrSpace
 import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
 
+import Control.Exception
 
 -------- HELPER
 
@@ -145,8 +146,28 @@ loadIdentifier (Node t (VIdentifier name)) = do
             let myType = typeToLLVMType t
             let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
             load var 0
-    where getName = AST.Name . fromString . stringToLLVMVarName
+    where
+        getName = AST.Name . fromString . stringToLLVMVarName
 loadIdentifier n = error (getErrorMessage "Identifier" n)
+
+-- loadIdentifier :: Node -> Codegen Operand
+-- loadIdentifier (Node t (VIdentifier name)) = do
+--     variables <- ask
+--     case variables Map.!? name of
+--         Just v -> pure v
+--         Nothing -> do
+--             let myType = typeToLLVMType t
+--             let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
+--             let var2 = LocalReference (Type.PointerType myType (AddrSpace 0)) ("x_1")
+            
+--             plouf <- try (load var2 0) :: IO (Either SomeException Operand)
+--             case (try (load var2 0) :: IO (Either SomeException Operand)) of
+--                 Left _ -> load var 0
+--                 Right _ -> load var2 0
+--             -- load var 0
+--     where
+--         getName = AST.Name . fromString . stringToLLVMVarName
+-- loadIdentifier n = error (getErrorMessage "Identifier" n)
 
 
 stringToLLVMVarName :: String -> String

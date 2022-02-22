@@ -143,7 +143,7 @@ testCreateCallExpr = do
             `shouldBe` (VCallExpr [Node TDouble (VExpr (Node TDouble (VUnary (Node TDouble (VPostfix (Node TDouble (VPrimary (Node TDouble (VIdentifier "guy")))) (Node TNone VNothing))) (Node TNone VNothing))) [])], Map.fromList [("guy",TDouble)])
     it "createCallExpr Map.empty []" $ do
         createCallExpr Map.empty []
-            `shouldBe` (VCallExpr [Node TNone VNothing], Map.empty)
+            `shouldBe` (VCallExpr [], Map.empty)
 
 testCreatePostfix :: Spec
 testCreatePostfix = do
@@ -158,7 +158,7 @@ testCreatePostfix = do
             `shouldBe` (VPostfix (Node TNone (VPrimary (Node TNone (VIdentifier "guy")))) (Node TNone VNothing), Map.empty)
     it "createPostfix (Map.fromList [(\"guy\", TFunc [TVoid])]) (Postfix (PId \"guy\") (Just []))" $ do
         createPostfix (Map.fromList [("guy", TFunc [TVoid])]) (Postfix (PId "guy") (Just []))
-            `shouldBe` (VPostfix (Node (TFunc [TVoid]) (VPrimary (Node (TFunc [TVoid]) (VIdentifier "guy")))) (Node (TFunc [TVoid]) (VCallExpr [Node TNone VNothing])), Map.fromList [("guy",TFunc [TVoid])])
+            `shouldBe` (VPostfix (Node (TFunc [TVoid]) (VPrimary (Node (TFunc [TVoid]) (VIdentifier "guy")))) (Node (TFunc [TVoid]) (VCallExpr [])), Map.fromList [("guy",TFunc [TVoid])])
     it "createPostfix (Map.fromList [(\"guy\", TFunc [TInteger, TDouble])]) (Postfix (PId \"guy\") (Just [Expr (UPostfix (Postfix (PLit (LInt 1)) Nothing)) [(Add, UPostfix (Postfix (PLit (LInt 1)) Nothing))]]))" $ do
         createPostfix (Map.fromList [("guy", TFunc [TInteger, TDouble])]) (Postfix (PId "guy") (Just [Expr (UPostfix (Postfix (PLit (LInt 1)) Nothing)) [(Add, UPostfix (Postfix (PLit (LInt 1)) Nothing))]]))
             `shouldBe` (VPostfix (Node (TFunc [TInteger,TDouble]) (VPrimary (Node (TFunc [TInteger,TDouble]) (VIdentifier "guy")))) (Node (TFunc [TInteger,TDouble]) (VCallExpr [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Add),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 1)))))) (Node TNone VNothing))) (Node TNone VNothing)))])])), Map.fromList [("guy",TFunc [TInteger,TDouble])])
