@@ -76,7 +76,7 @@ checkError' n = n
 
 checkErrorInNodes :: [Node] -> [Node]
 checkErrorInNodes (n:ns) =
-    case (checkError n, checkErrorInNodes ns) of 
+    case (checkError n, checkErrorInNodes ns) of
         (Error s, _) -> [Error s]
         (_, [Error s]) -> [Error s]
         (n', ns') -> n' : ns'
@@ -87,7 +87,7 @@ checkEIN = checkErrorInNodes
 
 checkErrorInNodeTuples :: [(Node, Node)] -> [(Node, Node)]
 checkErrorInNodeTuples ((n1, n2):ns) =
-    case ((checkError n1, checkError n2), checkErrorInNodeTuples ns) of 
+    case ((checkError n1, checkError n2), checkErrorInNodeTuples ns) of
         ((Error s, _), _) -> [(Error s, Error s)]
         ((_, Error s), _) -> [(Error s, Error s)]
         (_, [(Error s, _)]) -> [(Error s, Error s)]
@@ -99,20 +99,20 @@ checkNodeAndReturn :: Node -> Node -> Node
 checkNodeAndReturn _ (Error s) = Error s
 checkNodeAndReturn node _ = node
 
-checkNAR :: Node -> Node -> Node 
+checkNAR :: Node -> Node -> Node
 checkNAR = checkNodeAndReturn
 
 checkNodesAndReturn :: Node -> [Node] -> Node
 checkNodesAndReturn _ (Error s:_) = Error s
-checkNodesAndReturn node _ = node 
+checkNodesAndReturn node _ = node
 
-checkNsAR :: Node -> [Node] -> Node 
+checkNsAR :: Node -> [Node] -> Node
 checkNsAR = checkNodesAndReturn
 
 checkNodeTuplesAndReturn :: Node -> [(Node, Node)] -> Node
 checkNodeTuplesAndReturn _ ((Error s, _):_) = Error s
 checkNodeTuplesAndReturn _ ((_, Error s):_) = Error s
-checkNodeTuplesAndReturn node _ = node 
+checkNodeTuplesAndReturn node _ = node
 
 checkNTAR :: Node -> [(Node, Node)] -> Node
 checkNTAR = checkNodeTuplesAndReturn
@@ -161,11 +161,13 @@ createLiteralNode _ = Error "Typing of Literal failed"
 
 -- create Identifier
 
-createId :: Identifier -> Value
-createId = VIdentifier
+createId :: TypedId -> Identifier -> Value
+createId ti i = if Map.member i ti
+                then VIdentifier (i, False)
+                else VIdentifier (i, True)
 
 createIdNode :: TypedId -> Value -> Node
-createIdNode ti v@(VIdentifier s) =
+createIdNode ti v@(VIdentifier (s, _)) =
     case Map.lookup s ti of
         (Just t) -> Node t v
         Nothing  -> Node TNone v
@@ -176,7 +178,7 @@ createIdNode _ _ = Error "Typing of Identifier failed"
 
 createPrimary :: TypedId -> Primary -> (Value, TypedId)
 createPrimary ti (PId i) =
-    (VPrimary (createIdNode ti (createId i)), ti)
+    (VPrimary (createIdNode ti (createId ti i)), ti)
 createPrimary ti (PLit l) = (VPrimary (createLiteralNode (createLiteral l)), ti)
 createPrimary ti (PExprs es) =
     let (exprs, newTi) = createExprs ti es
@@ -281,8 +283,8 @@ applyTypeToSubNode ti t node = case node of
         n@(Node _ (VPostfix n1 n2)) -> applyTypeToTwoSubNode ti t n n1 n2
         (Node _ (VPrimary n)) -> let (newN, newTi) = applyTypeToSubNode ti t n
                                   in (Node t (VPrimary newN), newTi)
-        (Node _ (VIdentifier i))
-            -> (Node t (VIdentifier i), addNewTypedId i t ti)
+        (Node _ (VIdentifier i@(s, _)))
+            -> (Node t (VIdentifier i), addNewTypedId s t ti)
         n -> (n, ti)
 
 applyTypeToTwoSubNode :: TypedId -> Type -> Node -> Node -> Node
@@ -306,8 +308,8 @@ createExprNode _ = Error "Typing of Expr failed"
 
 createForExpr :: TypedId -> ForExpr -> (Value, TypedId)
 createForExpr ti (ForExpr (i1, e1) (i2, e2) e es) =
-        (VForExpr (Node (getNodeType exprNode1) (createId i1), exprNode1)
-                (Node (getNodeType exprNode2) (createId i2), exprNode2)
+        (VForExpr (Node (getNodeType exprNode1) (createId ti i1), exprNode1)
+                (Node (getNodeType exprNode2) (createId ti i2), exprNode2)
                 (createExprNode expr)
                 (createExprsNode exprs), newTi3)
     where
@@ -363,7 +365,7 @@ createWhileExprNode _ = Error "Typing of While Expr failed"
 -- create Exprs
 
 createExprs :: TypedId -> Exprs -> (Value, TypedId)
-createExprs ti (EForExpr f) = 
+createExprs ti (EForExpr f) =
     let (forExpr, newTi) = createForExpr ti f
     in (VExprs [createForExprNode forExpr], newTi)
 createExprs ti (EWhileExpr w) =
@@ -404,12 +406,13 @@ createArgsTypeNode _ = Error "Typing of Args Type failed"
 
 -- create Prototype Args
 
-createPrototypeArgs :: PrototypeArgs -> Value
-createPrototypeArgs (PrototypeArgs ia a) =
+createPrototypeArgs :: TypedId -> PrototypeArgs -> Value
+createPrototypeArgs ti (PrototypeArgs ia a) =
     VPrototypeArgs
         (fmap (\(i, a') ->
                 let argsTypeNode = createArgsTypeNode (createArgsType a')
-                in (Node (getNodeType argsTypeNode) (createId i), argsTypeNode))
+                in (Node (getNodeType argsTypeNode) (createId ti i),
+                    argsTypeNode))
               ia)
         (createArgsTypeNode (createArgsType a))
 
@@ -425,12 +428,12 @@ createPrototypeArgsNode _ = Error "Typing of Prototype Args failed"
 
 createPrototype :: TypedId -> Prototype -> (Value, TypedId)
 createPrototype ti (Prototype i pa) =
-    (VPrototype (Node (getNodeType protoArgsNode) (createId i))
+    (VPrototype (Node (getNodeType protoArgsNode) (createId ti i))
                protoArgsNode,
     addArgsToTypedId ti args)
     where
         protoArgsNode@(Node _ (VPrototypeArgs args _)) =
-            createPrototypeArgsNode (createPrototypeArgs pa)
+            createPrototypeArgsNode (createPrototypeArgs ti pa)
 
 createPrototypeNode :: Value -> Node
 createPrototypeNode v@(VPrototype (Node t _) _) = Node t v
@@ -438,8 +441,8 @@ createPrototypeNode (VError s) = Error s
 createPrototypeNode _ = Error "Typing of Prototype failed"
 
 addArgsToTypedId :: TypedId -> [(Node, Node)] -> TypedId
-addArgsToTypedId ti ((Node t (VIdentifier i), _):args) =
-    addArgsToTypedId (addNewTypedId i t ti) args
+addArgsToTypedId ti ((Node t (VIdentifier (s, _)), _):args) =
+    addArgsToTypedId (addNewTypedId s t ti) args
 addArgsToTypedId ti [] = ti
 addArgsToTypedId _ _ = Map.empty
 
@@ -449,11 +452,11 @@ createDefs :: TypedId -> Defs -> Value
 createDefs ti (Defs p es) = VDefs prototypeNode
                                   (createExprsNode exprs)
     where
-        (prototype@(VPrototype (Node _ (VIdentifier i)) _),
+        (prototype@(VPrototype (Node _ (VIdentifier (s, _))) _),
          newTi1) = createPrototype ti p
         prototypeNode = createPrototypeNode prototype
         (exprs, _) =
-            createExprs (addNewTypedId i (getNodeType prototypeNode) newTi1) es
+            createExprs (addNewTypedId s (getNodeType prototypeNode) newTi1) es
 
 createDefsNode :: Value -> Node
 createDefsNode v@(VDefs (Node t _) _) = Node t v
@@ -463,14 +466,14 @@ createDefsNode _ = Error "Typing of Defs failed"
 
 createKdefs :: TypedId -> Kdefs -> (Value, TypedId)
 createKdefs ti (KDefs d) =
-        (VKdefs defsNode, addNewTypedId i (getNodeType defsNode) ti)
+        (VKdefs defsNode, addNewTypedId s (getNodeType defsNode) ti)
     where
-        defs@(VDefs (Node _ (VPrototype (Node _ (VIdentifier i)) _)) _) =
+        defs@(VDefs (Node _ (VPrototype (Node _ (VIdentifier (s, _))) _)) _) =
             createDefs ti d
         defsNode = createDefsNode defs
 createKdefs ti (KExprs es) = let (exprs, newTi) = createExprs ti es
                              in (VKdefs (createExprsNode exprs), newTi)
-    
+
 
 -- create Stmt
 
@@ -503,7 +506,7 @@ addTypeToList t rest = case rest of
 
 -- get Type
 
-getNodeType :: Node -> Type 
+getNodeType :: Node -> Type
 getNodeType (Node t _) = t
 getNodeType (Error s) = TError s
 

@@ -130,14 +130,14 @@ litToLLVM n = error (getErrorMessage "Literal" n)
 
 getIdentifier :: Node -> String
 getIdentifier (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary
-                  (Node _ (VIdentifier s)))) (Node TNone VNothing)))
+                  (Node _ (VIdentifier (s, _))))) (Node TNone VNothing)))
                   (Node TNone VNothing))) = s
-getIdentifier (Node _ (VPrimary (Node _ (VIdentifier s)))) = s
-getIdentifier (Node _ (VPrototype (Node _ (VIdentifier s)) _)) = s
+getIdentifier (Node _ (VPrimary (Node _ (VIdentifier (s, _))))) = s
+getIdentifier (Node _ (VPrototype (Node _ (VIdentifier (s, _))) _)) = s
 getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
 
 loadIdentifier :: Node -> Codegen Operand
-loadIdentifier (Node t (VIdentifier name)) = do
+loadIdentifier (Node t (VIdentifier (name, _))) = do
     variables <- ask
     case variables Map.!? name of
         Just v -> pure v
@@ -427,7 +427,7 @@ prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) =
 prototypeArgsToLLVM n = error (getErrorMessage "Prototype Args" n)
 
 getAllParameters :: [(Node, Node)] -> [(AST.Type, ParameterName)]
-getAllParameters (((Node _ (VIdentifier s)), at): iats) =
+getAllParameters (((Node _ (VIdentifier (s, _))), at): iats) =
     ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
 getAllParameters [] = []
 getAllParameters _ = error (getErrorMessage "Prototype Args" (Error ""))
