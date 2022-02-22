@@ -164,6 +164,7 @@ getIdentifier (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary
                   (Node TNone VNothing))) = i
 getIdentifier (Node _ (VPrimary (Node _ (VIdentifier i)))) = i
 getIdentifier (Node _ (VPrototype (Node _ (VIdentifier i)) _)) = i
+getIdentifier (Node _ (VIdentifier i)) = i
 getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
 
 -------- PRIMARY
@@ -313,7 +314,7 @@ gtToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
         TInteger -> icmp Sicmp.SGT a b
         TDouble -> fcmp OGT a b >>= \x -> uitofp x Type.double
         _ ->  error (getErrorMessage "Gt" (Error ""))
-gtToLLVM _ _ = error (getErrorMessage "Gt" (Error ""))
+gtToLLVM n _ = error (getErrorMessage "Gt" n)
 
 
 ltToLLVM :: Node -> Operand -> Codegen Operand
@@ -377,28 +378,29 @@ whileToLLVM n = error (getErrorMessage "While Expr" n)
 -------- FOR
 
 forToLLVM :: Node -> Codegen Operand
-forToLLVM = undefined
+forToLLVM (Node _ (VForExpr (itName, itVal) (condName, (Node _ (VExpr condVal _))) act instrs)) = mdo
+    itVal' <- exprToLLVM itVal
+    start <- block `named` "for.head"
+    br begin
 
--- forToLLVM :: (Node, Node) -> (Node, Node) -> Node -> Node -> Codegen Operand
--- forToLLVM (itName, itVal) (condName, condVal) act instrs = mdo
---     itVal' <- exprToLLVM itVal
---     start <- currentBlock
---     br begin
+    begin <- block `named` "for.begin"
+    loopVal <- phi [(itVal', start), (updatedVal, begin)]
 
---     begin <- block `named` "for.begin"
---     loopVal <- phi [(itVal', start), (updatedVal, bodyEnd)]
---     res <- ltToLLVM loopVal  condVal
---     condBr res bodyStart end
+    res <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ gtToLLVM condVal loopVal >>= \x -> icmp Sicmp.NE x (bit 0) `named` "test_block"
 
---     bodyStart <- block `named` "for.body"
---     _ <- withReaderT (Map.insert (getIdentifierName itName) loopVal) $ exprsToLLVM instrs
+    condBr res bodyStart end
 
---     updatedVal <-  withReaderT (Map.insert (getIdentifierName itName) loopVal) $ exprToLLVM act
---     bodyEnd <- currentBlock
---     br begin
+    bodyStart <- block `named` "for.body"
+    final <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprsToLLVM instrs `named` "instr_block"
 
---     end <- block `named` "for.end"
---     return $ int32 0
+    updatedVal <-  withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprToLLVM act `named` "act_block"
+    bodyEnd <- currentBlock
+    -- error $ "hello " ++ show x
+    br begin
+
+    end <- block `named` "for.end"
+    return final
+forToLLVM n = error $ getErrorMessage "For Expr" n
 
 -------- IF
 
