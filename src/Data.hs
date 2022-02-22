@@ -43,7 +43,7 @@ data Value =
   | VPostfix Node Node
   | VCallExpr [Node]
   | VPrimary Node
-  | VIdentifier String
+  | VIdentifier (String, IsDeclaration)
   | VDecimalConst Int
   | VDoubleConst Double
   | VLiteral Node
@@ -121,6 +121,8 @@ data Primary = PId Identifier
 
 -- [a - z A - Z][a - z A - Z 0 - 9]*
 type Identifier = String
+
+type IsDeclaration = Bool
 
 -- [0 - 9]+
 type DecimalConst = Int

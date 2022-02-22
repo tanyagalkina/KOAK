@@ -76,7 +76,7 @@ import Prelude hiding (mod)
 
 -- OUT IMPORTS
 
-import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..))
+import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration)
 import LLVM.AST.AddrSpace
 import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
 
@@ -128,36 +128,50 @@ litToLLVM n = error (getErrorMessage "Literal" n)
 
 -------- IDENTIFIER
 
-getIdentifier :: Node -> String
-getIdentifier (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary
-                  (Node _ (VIdentifier s)))) (Node TNone VNothing)))
-                  (Node TNone VNothing))) = s
-getIdentifier (Node _ (VPrimary (Node _ (VIdentifier s)))) = s
-getIdentifier (Node _ (VPrototype (Node _ (VIdentifier s)) _)) = s
-getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
-
-loadIdentifier :: Node -> Codegen Operand
-loadIdentifier (Node t (VIdentifier name)) = do
+loadIdentifierValue :: Node -> Codegen Operand
+loadIdentifierValue (Node t (VIdentifier (name, _))) = do
     variables <- ask
     case variables Map.!? name of
         Just v -> pure v
         Nothing -> do
             let myType = typeToLLVMType t
             let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
-            load var 0
-    where getName = AST.Name . fromString . stringToLLVMVarName
-loadIdentifier _ = error "loadIdentifier: Unknown type"
+            myLoad var
+    where
+        getName = AST.Name . fromString . stringToLLVMVarName
+loadIdentifierValue n = error (getErrorMessage "Identifier" n)
 
+updateIdentifier :: Node -> Operand -> Codegen Operand
+updateIdentifier (Node t (VIdentifier (name, _))) val = do
+    variables <- ask
+    case variables Map.!? name of
+        Just v -> pure v
+        Nothing -> do
+            let myType = typeToLLVMType t
+            let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
+            myStore var val
+            return var
+    where
+        getName = AST.Name . fromString . stringToLLVMVarName
+updateIdentifier n _ = error (getErrorMessage "Identifier" n)
 
 stringToLLVMVarName :: String -> String
 stringToLLVMVarName str = str ++ "_0"
+
+getIdentifier :: Node -> (String, IsDeclaration)
+getIdentifier (Node _ (VUnary (Node _ (VPostfix (Node _ (VPrimary
+                  (Node _ (VIdentifier i)))) (Node TNone VNothing)))
+                  (Node TNone VNothing))) = i
+getIdentifier (Node _ (VPrimary (Node _ (VIdentifier i)))) = i
+getIdentifier (Node _ (VPrototype (Node _ (VIdentifier i)) _)) = i
+getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
 
 -------- PRIMARY
 
 primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
 primaryToLLVM (Node _ (VPrimary i@(Node _ (VIdentifier _)))) =
-    loadIdentifier i
+    loadIdentifierValue i
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VExprs _)))) = exprsToLLVM n
 primaryToLLVM n = error (getErrorMessage "Primary" n)
 
@@ -165,7 +179,7 @@ primaryToLLVM n = error (getErrorMessage "Primary" n)
 
 callExprToLLVM :: Node -> Codegen [(Operand, [ParameterAttribute])]
 callExprToLLVM (Node _ (VCallExpr list)) = getAllArguments list
-callExprToLLVM n = error (getErrorMessage "Call Expr 1" n)
+callExprToLLVM n = error (getErrorMessage "Call Expr" n)
 
 getAllArguments :: [Node] -> Codegen [(Operand, [ParameterAttribute])]
 getAllArguments (e@(Node _ (VExpr _ _)):rest) = do
@@ -173,7 +187,7 @@ getAllArguments (e@(Node _ (VExpr _ _)):rest) = do
     restOfArguments <- getAllArguments rest
     return ((operand, []) : restOfArguments)
 getAllArguments [] = return []
-getAllArguments _ = error (getErrorMessage "Call Expr 2" (Error ""))
+getAllArguments _ = error (getErrorMessage "Call Expr" (Error ""))
 
 -------- POSTFIX
 
@@ -182,7 +196,7 @@ postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
 postfixToLLVM (Node _ (VPostfix n c)) = do
     let ptrTy = Type.PointerType i32 (AddrSpace 0)
-    let ref = GlobalReference ptrTy (fromString $ getIdentifier n)
+    let ref = GlobalReference ptrTy (fromString $ fst $ getIdentifier n)
     funcArgs <- callExprToLLVM c
     LLVM.IRBuilder.Instruction.call (ConstantOperand ref) funcArgs
 postfixToLLVM n = error (getErrorMessage "Postfix" n)
@@ -327,14 +341,19 @@ neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
 neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
 
 assignToLLVM :: Node -> Operand -> Codegen Operand
-assignToLLVM i@(Node t _) val = mdo
+assignToLLVM u@(Node t _) val = mdo
     let myType = typeToLLVMType t
+    let (idString, isDec) = getIdentifier u
     br assignBlock
 
     assignBlock <- block `named` "assign.start"
-    ptr <- alloca myType (Just (Const.int32 1)) 0 `named` fromString (getIdentifier i)
-    myStore ptr val
-    withReaderT (Map.insert (getIdentifier i) ptr) $ myLoad ptr
+    if isDec
+    then do
+        newVarPtr <- alloca myType (Just (Const.int32 1)) 0 `named` fromString idString
+        myStore newVarPtr val
+        withReaderT (Map.insert idString newVarPtr) $ myLoad newVarPtr
+    else do
+        updateIdentifier (Node t (VIdentifier (idString, isDec))) val
 assignToLLVM _ _ = error "Assign unknown type"
 
 -------- WHILE
@@ -427,7 +446,7 @@ prototypeArgsToLLVM (Node _ (VPrototypeArgs iats at)) =
 prototypeArgsToLLVM n = error (getErrorMessage "Prototype Args" n)
 
 getAllParameters :: [(Node, Node)] -> [(AST.Type, ParameterName)]
-getAllParameters (((Node _ (VIdentifier s)), at): iats) =
+getAllParameters (((Node _ (VIdentifier (s, _))), at): iats) =
     ((argsTypeToLLVM at, fromString s) : getAllParameters iats)
 getAllParameters [] = []
 getAllParameters _ = error (getErrorMessage "Prototype Args" (Error ""))
@@ -442,7 +461,7 @@ prototypeToLLVM n = error (getErrorMessage "Prototype" n)
 
 defsToLLVM :: Node -> ModuleBuilder Operand
 defsToLLVM (Node _ (VDefs p es)) = mdo
-    let funcName = getIdentifier p
+    let funcName = fst $ getIdentifier p
     let (pars, returnType) = prototypeArgsToLLVM p
     fn <- LLVM.IRBuilder.Module.function (mkName funcName) pars
                                                            returnType
