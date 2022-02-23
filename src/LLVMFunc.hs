@@ -230,8 +230,9 @@ generateMinusOne = unaryToLLVM (Node TInteger
 
 notToLLVM :: Node -> Codegen Operand
 notToLLVM u@(Node t (VUnary _ _)) =  case t of
-    TInteger -> eqToLLVM u (bit 0)
-    TDouble  -> eqToLLVM u (bit 0)
+    TInteger -> eqToLLVM u (toIntOpe 0)
+    TDouble  -> eqToLLVM u (toFloatOpe 0)
+    TBool -> eqToLLVM u (bit 0)
     _ -> error (getErrorMessage "Not" (Error ""))
 notToLLVM _ = error (getErrorMessage "Not" (Error ""))
 
@@ -277,6 +278,7 @@ addToLLVM u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> add a b
         TDouble -> fadd a b
+        TBool -> add a b
         _ -> error (getErrorMessage "Add" (Error ""))
 addToLLVM _ _ = error (getErrorMessage "Add" (Error ""))
 
@@ -286,6 +288,7 @@ subToLLVm u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> sub a b
         TDouble -> fsub a b
+        TBool -> sub a b
         _ -> error (getErrorMessage "Sub" (Error ""))
 subToLLVm _ _ = error (getErrorMessage "Sub" (Error ""))
 
@@ -295,6 +298,7 @@ mulToLLVM u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> mul a b
         TDouble -> fmul a b
+        TBool -> mul a b
         _ -> error (getErrorMessage "Mul" (Error ""))
 mulToLLVM _ _ = error (getErrorMessage "Mul" (Error ""))
 
@@ -304,6 +308,7 @@ divToLLVM u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> sdiv a b
         TDouble -> fdiv a b
+        TBool -> sdiv a b
         _ -> error (getErrorMessage "Div" (Error ""))
 divToLLVM _ _ = error (getErrorMessage "Div" (Error ""))
 
@@ -312,6 +317,7 @@ gtToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.SGT a b
         TDouble -> fcmp OGT a b >>= \x -> uitofp x Type.double
+        TBool -> icmp Sicmp.SGT a b
         _ ->  error (getErrorMessage "Gt" (Error ""))
 gtToLLVM _ _ = error (getErrorMessage "Gt" (Error ""))
 
@@ -321,6 +327,7 @@ ltToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.SLT a b
         TDouble -> fcmp OLT  a b >>= \x -> uitofp x Type.double
+        TBool -> icmp Sicmp.SLT a b
         _ ->  error (getErrorMessage "Lt" (Error ""))
 ltToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
 
@@ -329,6 +336,7 @@ eqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.EQ a b
         TDouble -> fcmp OEQ a b >>= \x -> uitofp x Type.double
+        TBool -> icmp Sicmp.EQ a b
         _ ->  error (getErrorMessage "Eq" (Error ""))
 eqToLLVM _ _ = error (getErrorMessage "Eq" (Error ""))
 
@@ -337,6 +345,7 @@ neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.NE a b
         TDouble -> fcmp ONE  a b >>= \x -> uitofp x Type.double
+        TBool -> icmp Sicmp.NE a b
         _ ->  error (getErrorMessage "Neq" (Error ""))
 neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
 

@@ -24,6 +24,7 @@ data Type = TUndefine
     | TVoid
     | TDouble
     | TInteger
+    | TBool
     | TFunc [Data.Type]
     deriving (Show, Eq)
 

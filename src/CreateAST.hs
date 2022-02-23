@@ -11,7 +11,7 @@ import Parser ( Parser )
 
 import Data
     ( Unop,
-      Binop(Assign),
+      Binop(..),
       Literal(..),
       DoubleConst,
       DecimalConst,
@@ -35,7 +35,8 @@ import Data
       Value(..),
       Type(..),
       Node(..),
-      AST )
+      AST,
+      Unop (..))
 import ParseCode ( parseStmt )
 
 -- create AST / EDITABLE
@@ -145,6 +146,13 @@ createUnop = VUnop
 createBinop :: Binop -> Value
 createBinop = VBinop
 
+updateCmpBinopNumber :: Binop -> Int -> Int
+updateCmpBinopNumber Gt cmpBNb = cmpBNb + 1
+updateCmpBinopNumber Lt cmpBNb = cmpBNb + 1
+updateCmpBinopNumber Eq cmpBNb = cmpBNb + 1
+updateCmpBinopNumber Neq cmpBNb = cmpBNb + 1
+updateCmpBinopNumber _ cmpBNb = cmpBNb
+
 -- create Literal
 
 createLiteral :: Literal -> Value
@@ -219,9 +227,9 @@ createPostfixNode _ = Error "Typing of Postfix failed"
 
 createUnary :: TypedId -> Unary -> (Value, TypedId)
 createUnary ti (Unop uno una) =
-    let (unaryNode, newTi) = createUnary ti una
+    let (unary, newTi) = createUnary ti una
     in (VUnary (Node TNone (createUnop uno))
-               (createUnaryNode unaryNode), newTi)
+               (createUnaryNode unary), newTi)
 createUnary ti (UPostfix p) =
     let (postfixNode, newTi) = createPostfix ti p
     in (VUnary (createPostfixNode postfixNode) createEmptyNode, newTi)
@@ -234,26 +242,26 @@ createUnaryNode _ = Error "Typing of Unary failed"
 
 -- create Expr
 
-createExpr :: TypedId -> Expr -> (Value, TypedId)
+createExpr :: TypedId -> Expr -> (Value, TypedId, Int)
 createExpr ti (Expr u bu) = (VExpr unaryNode (reverse reversedBuNode),
-                             Map.union newTi1 newTi2)
+                             Map.union newTi1 newTi2, cmpBNb)
     where
-        (reversedBuNode, newTi1) =
-            let (buNodes, newTi1') = createBinopUnaryNodes ([], ti) bu
-            in applyAssignType newTi1' (reverse buNodes)
+        ((reversedBuNode, newTi1), cmpBNb) =
+            let (buNodes, newTi1', cmpBNb') = createBinopUnaryNodes ([], ti, 0) bu
+            in (applyAssignType newTi1' (reverse buNodes), cmpBNb')
         (unaryNode, newTi2) =
             let (unary, newTi2') = createUnary ti u
             in case (reverse reversedBuNode, createUnaryNode unary) of
                     ([], uN) -> (uN, newTi2')
                     (x:_, uN) -> applyAssignTypeToFirst newTi2' x uN
 
-createBinopUnaryNodes :: ([(Node, Node)], TypedId) -> [(Binop, Unary)]
-                         -> ([(Node, Node)], TypedId)
-createBinopUnaryNodes (list, ti) ((b, u):bus) =
+createBinopUnaryNodes :: ([(Node, Node)], TypedId, Int) -> [(Binop, Unary)]
+                         -> ([(Node, Node)], TypedId, Int)
+createBinopUnaryNodes (list, ti, cmpBNb) ((b, u):bus) =
     let (unary, newTi) = createUnary ti u
         binopNode = Node TNone (createBinop b)
     in createBinopUnaryNodes (list ++ [(binopNode, createUnaryNode unary)],
-                              newTi)
+                              newTi, updateCmpBinopNumber b cmpBNb)
                              bus
 createBinopUnaryNodes res [] = res
 
@@ -298,11 +306,16 @@ applyTypeToTwoSubNode ti t n n1 n2 = case n of
         (newN2, newTi2) = applyTypeToSubNode ti t n2
         newTi = Map.union newTi1 newTi2
 
-createExprNode :: Value -> Node
-createExprNode v@(VExpr first list) =
-    Node (getExprType (getNodeType first : fmap (getNodeType . snd) list)) v
-createExprNode (VError s) = Error s
-createExprNode _ = Error "Typing of Expr failed"
+createExprNode :: Value -> Int -> Node
+createExprNode v@(VExpr first list) cmpBNb =
+    let exprType = getExprType (getNodeType first : fmap (getNodeType . snd) list)
+    in case (cmpBNb, exprType) of
+        (_, TError s) -> Error s
+        (0, _) -> Node exprType v
+        (1, _) -> Node TBool v
+        (_, _) -> Error "Typing of Expr failed"
+createExprNode (VError s) _ = Error s
+createExprNode _ _ = Error "Typing of Expr failed"
 
 -- create For Expr
 
@@ -310,15 +323,15 @@ createForExpr :: TypedId -> ForExpr -> (Value, TypedId)
 createForExpr ti (ForExpr (i1, e1) (i2, e2) e es) =
         (VForExpr (Node (getNodeType exprNode1) (createId ti i1), exprNode1)
                 (Node (getNodeType exprNode2) (createId ti i2), exprNode2)
-                (createExprNode expr)
+                (createExprNode expr cmpBNb3)
                 (createExprsNode exprs), newTi3)
     where
-        (expr1, newTi1) = createExpr ti e1
-        exprNode1 = createExprNode expr1
-        (expr2, newTi2) =
+        (expr1, newTi1, cmpBNb1) = createExpr ti e1
+        exprNode1 = createExprNode expr1 cmpBNb1
+        (expr2, newTi2, cmpBNb2) =
             createExpr (addNewTypedId i1 (getNodeType exprNode1) newTi1) e2
-        exprNode2 = createExprNode expr2
-        (expr, newTi) =
+        exprNode2 = createExprNode expr2 cmpBNb2
+        (expr, newTi, cmpBNb3) =
             createExpr newTi2 e
         (exprs, newTi3) = createExprs newTi es
 
@@ -331,15 +344,15 @@ createForExprNode _ = Error "Typing of For Expr failed"
 
 createIfExpr :: TypedId -> IfExpr -> (Value, TypedId)
 createIfExpr ti (IfExpr e es1 es2) = case es2 of
-    Nothing -> (VIfExpr (createExprNode expr)
+    Nothing -> (VIfExpr (createExprNode expr cmpBNb)
                        (createExprsNode exprs1)
                        createEmptyNode, newTi1)
     (Just es) -> let (exprs2, newTi2) = createExprs newTi1 es
-                 in (VIfExpr (createExprNode expr)
+                 in (VIfExpr (createExprNode expr cmpBNb)
                                     (createExprsNode exprs1)
                                     (createExprsNode exprs2), newTi2)
     where
-        (expr, newTi) = createExpr ti e
+        (expr, newTi, cmpBNb) = createExpr ti e
         (exprs1, newTi1) = createExprs newTi es1
 
 createIfExprNode :: Value -> Node
@@ -351,10 +364,10 @@ createIfExprNode _ = Error "Typing of If Expr failed"
 
 createWhileExpr :: TypedId -> WhileExpr -> (Value, TypedId)
 createWhileExpr ti (WhileExpr e es) =
-    (VWhileExpr (createExprNode expr)
+    (VWhileExpr (createExprNode expr cmpBNb)
                 (createExprsNode exprs), newTi2)
     where
-        (expr, newTi1) = createExpr ti e
+        (expr, newTi1, cmpBNb) = createExpr ti e
         (exprs, newTi2) = createExprs newTi1 es
 
 createWhileExprNode :: Value -> Node
@@ -380,8 +393,8 @@ createExprs ti (EExpr e) =
 
 createExprNodes :: ([Node], TypedId) -> [Expr] -> ([Node], TypedId)
 createExprNodes (list, ti) (expr:exprs) =
-    let (newExpr, newTi) = createExpr ti expr
-    in createExprNodes (list ++ [createExprNode newExpr], newTi) exprs
+    let (newExpr, newTi, cmpBNb) = createExpr ti expr
+    in createExprNodes (list ++ [createExprNode newExpr cmpBNb], newTi) exprs
 createExprNodes res [] = res
 
 createExprsNode :: Value -> Node
@@ -507,6 +520,7 @@ addTypeToList t rest = case rest of
 -- get Type
 
 getNodeType :: Node -> Type
+getNodeType (Node _ (VUnary (Node _ (VUnop Not)) _)) = TBool
 getNodeType (Node t _) = t
 getNodeType (Error s) = TError s
 
