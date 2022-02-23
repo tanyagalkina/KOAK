@@ -44,8 +44,8 @@ function test() {
 
 test "data/examples/numberExamples/numberExample1.koak" "1"
 test "data/examples/numberExamples/numberExample2.koak" "2"
-#test "data/examples/numberExamples/numberExample3.koak" "270198"
-#test "data/examples/numberExamples/numberExample3.koak" "3.14"
+test "data/examples/numberExamples/numberExample3.koak" "270198"
+test "data/examples/numberExamples/numberExample4.koak" "3.14"
 
 test "data/examples/binopExamples/binopExample1.koak" "16"
 test "data/examples/binopExamples/binopExample2.koak" "3"

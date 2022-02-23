@@ -15,6 +15,7 @@ import LLVM.CodeModel as C
 
 import LLVM.IRBuilder as IRB
 import LLVM.IRBuilder.Module
+import LLVM.IRBuilder.Instruction
 
 import LLVM.AST
 import LLVM.AST.Type as Type
@@ -37,13 +38,13 @@ import System.Process
 -- OUR IMPORTS
 
 import LLVMFunc
-import Data (Value(VStmt), AST, Node (..), Codegen)
+import Data (Value(VStmt), AST, Node (..), Codegen, Type (..))
 
 
 astToLLVM :: AST -> IO ()
 astToLLVM instr = do
     callCommand "./script/clear.sh"
-    let mod = buildModule "koakModule" $ compileModule' instr
+    let mod = buildModule "koakModule" $ compileModule instr
     withContext $ \ctx ->
         withModuleFromAST ctx mod $ \mod' -> do
             withHostTargetMachine R.PIC C.Default None $ \tm -> do
@@ -52,13 +53,31 @@ astToLLVM instr = do
                 callCommand "./script/build.sh"
 
 
-compileModule' :: AST -> ModuleBuilder ()
-compileModule' instr = do
+compileModule :: AST -> ModuleBuilder ()
+compileModule instr = do
     let state = Map.fromList [("test", int32 0)]
     _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
         res <- runReaderT (compileInstrs instr) state
-        ret res
+        _ <- runReaderT (printResult instr res) state
+        ret (int32 0)
     pure ()
+
+printResult :: AST -> Operand -> Codegen ()
+printResult instr res = do
+    case instr of
+        (Node TInteger _) -> printInt
+        (Node TBool _) -> printInt
+        (Node TDouble _) -> do
+            printDouble <- extern "printDouble" [Type.double] void
+            _ <- LLVM.IRBuilder.Instruction.call printDouble [(res,[])]
+            pure ()
+        _ -> do
+            pure ()
+    where
+        printInt = do
+            printIntFunc <- extern "printInt" [i32] void
+            _ <- LLVM.IRBuilder.Instruction.call printIntFunc [(res,[])]
+            pure ()
 
 compileInstrs :: AST -> Codegen Operand
 compileInstrs instr = case instr of

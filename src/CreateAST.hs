@@ -45,7 +45,7 @@ createAST :: Parser AST
 createAST = (\ast -> let (stmt, ti) = createStmt Map.empty ast
                      in  if Map.member "" ti
                          then Error "Two identifier are identical"
-                         else checkError (Node TNone stmt)) <$> parseStmt
+                         else checkError (createStmtNode stmt)) <$> parseStmt
 
 -- check Error
 
@@ -487,17 +487,25 @@ createKdefs ti (KDefs d) =
 createKdefs ti (KExprs es) = let (exprs, newTi) = createExprs ti es
                              in (VKdefs (createExprsNode exprs), newTi)
 
+createKdefsNode :: Value -> Node 
+createKdefsNode v@(VKdefs (Node t (VDefs _ _))) = Node t v
+createKdefsNode v@(VKdefs (Node t (VExprs _))) = Node t v
+createKdefsNode _ = Error "Typing of Kdefs failed"
 
 -- create Stmt
 
 createStmt :: TypedId -> Stmt -> (Value, TypedId)
 createStmt ti (k:ks) = case createStmt newTi ks of
-        (VStmt list, endTi) -> (VStmt (Node TNone kdefs : list), endTi)
+        (VStmt list, endTi) -> (VStmt (createKdefsNode kdefs : list), endTi)
         (VError s, endTi) -> (VError s, endTi)
         (_, endTi) -> (VError "Typing of Stmt failed", endTi)
     where
         (kdefs, newTi) = createKdefs ti k
 createStmt ti [] = (VStmt [], ti)
+
+createStmtNode :: Value -> Node
+createStmtNode v@(VStmt (reverse -> (kdef:_))) = Node (getNodeType kdef) v
+createStmtNode _ = Error "Typing of Kdefs failed"
 
 -- turn list of type into function type
 
