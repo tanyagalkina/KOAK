@@ -196,7 +196,8 @@ postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
 postfixToLLVM (Node _ (VPostfix n c)) = do
-    let ptrTy = Type.PointerType i32 (AddrSpace 0)
+    let ty    = FunctionType i32 () False
+    let ptrTy = Type.PointerType ty (AddrSpace 0)
     let ref = GlobalReference ptrTy (fromString $ fst $ getIdentifier n)
     funcArgs <- callExprToLLVM c
     LLVM.IRBuilder.Instruction.call (ConstantOperand ref) funcArgs
