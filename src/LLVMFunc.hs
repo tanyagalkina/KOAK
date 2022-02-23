@@ -490,8 +490,8 @@ parametersToString list = (show . snd) <$> list
 
 kdefsToLLVM :: Node -> Codegen Operand
 kdefsToLLVM (Node _ (VKdefs es@(Node _ (VExprs _)))) = exprsToLLVM es
-kdefsToLLVM (Node _ (VKdefs (Node _ (VDefs _ _)))) = do
-    -- plouf <- defsToLLVM d
+kdefsToLLVM (Node _ (VKdefs d@(Node _ (VDefs _ _)))) = do
+    let _ = defsToLLVM d
     return $ int32 0
 kdefsToLLVM n = error (getErrorMessage "Kdefs" n)
 

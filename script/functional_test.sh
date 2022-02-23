@@ -49,7 +49,7 @@ test "data/examples/numberExamples/numberExample4.koak" "3.14"
 
 test "data/examples/binopExamples/binopExample1.koak" "16"
 test "data/examples/binopExamples/binopExample2.koak" "3"
-#test "data/examples/binopExamples/binopExample3.koak" "3.1"
+test "data/examples/binopExamples/binopExample3.koak" "3.1"
 test "data/examples/binopExamples/binopExample4.koak" "2"
 test "data/examples/binopExamples/binopExample5.koak" "2"
 test "data/examples/binopExamples/binopExample6.koak" "0"
