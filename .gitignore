@@ -5,3 +5,4 @@ koak.o
 a.out
 my.o
 my.ll
+lib/printLib.o
