@@ -271,7 +271,20 @@ opToLLVM op u o = mdo
         fct Data.Sub = subToLLVm
         fct Data.Mul = mulToLLVM
         fct Data.Div = divToLLVM
+        fct Data.Mod = modToLLVM
         fct _ = error (getErrorMessage "Binop" (Error ""))
+
+
+modToLLVM :: Node -> Operand -> Codegen Operand
+modToLLVM u@(Node t (VUnary _ _)) b = mdo
+    a <- unaryToLLVM u
+    case t of
+        TInteger -> urem a b
+        TDouble -> frem a b
+        _ -> error (getErrorMessage "Mod" (Error ""))
+modToLLVM _ _ = error (getErrorMessage "Mod" (Error ""))
+
+
 
 addToLLVM :: Node -> Operand -> Codegen Operand
 addToLLVM u@(Node t (VUnary _ _)) b = mdo
@@ -279,7 +292,7 @@ addToLLVM u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> add a b
         TDouble -> fadd a b
-        TBool -> add a b
+        TBool -> add a b  -- WHAT DOES IT MEAN??
         _ -> error (getErrorMessage "Add" (Error ""))
 addToLLVM _ _ = error (getErrorMessage "Add" (Error ""))
 
@@ -289,7 +302,7 @@ subToLLVm u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> sub a b
         TDouble -> fsub a b
-        TBool -> sub a b
+        TBool -> sub a b -- WHAT DOES IT MEAN?
         _ -> error (getErrorMessage "Sub" (Error ""))
 subToLLVm _ _ = error (getErrorMessage "Sub" (Error ""))
 

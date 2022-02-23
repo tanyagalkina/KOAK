@@ -135,7 +135,7 @@ type DoubleConst = Double
 data Literal = LInt DecimalConst | LDouble DoubleConst
     deriving (Show, Eq)
 
-data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
+data Binop = Mul | Div | Add | Sub | Mod | Gt | Lt | Eq | Neq | Assign
     deriving (Show, Eq)
 
 data Unop = Not | Minus
