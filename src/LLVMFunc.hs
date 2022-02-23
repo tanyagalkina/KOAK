@@ -275,6 +275,8 @@ opToLLVM op u o = mdo
         fct _ = error (getErrorMessage "Binop" (Error ""))
 
 
+
+--it is actuall rem and not modulo :: srem is used for signed reminder of integers
 modToLLVM :: Node -> Operand -> Codegen Operand
 modToLLVM u@(Node t (VUnary _ _)) b = mdo
     a <- unaryToLLVM u
