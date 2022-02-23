@@ -196,7 +196,7 @@ postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
 postfixToLLVM (Node _ (VPostfix n c)) = do
-    let ty    = FunctionType i32 () False
+    let ty    = FunctionType i32 [] False  -- TODO : replace empty list by list of LLVM.Type of the function's parameters
     let ptrTy = Type.PointerType ty (AddrSpace 0)
     let ref = GlobalReference ptrTy (fromString $ fst $ getIdentifier n)
     funcArgs <- callExprToLLVM c
