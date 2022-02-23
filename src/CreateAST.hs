@@ -36,7 +36,9 @@ import Data
       Type(..),
       Node(..),
       AST,
-      Unop (..))
+      Unop (..),
+      Boolean (..),
+      Coms)
 import ParseCode ( parseStmt )
 
 -- create AST / EDITABLE
@@ -126,6 +128,11 @@ createEmptyNode = Node TNone VNothing
 cEN :: Node
 cEN = createEmptyNode
 
+-- create Boolean
+
+createBoolean :: Boolean -> Value
+createBoolean = VBoolean
+
 -- create Decimal Const
 
 createDecimalConst :: DecimalConst -> Value
@@ -171,8 +178,8 @@ createLiteralNode _ = Error "Typing of Literal failed"
 
 createId :: TypedId -> Identifier -> Value
 createId ti i = if Map.member i ti
-                then VIdentifier (i, False)
-                else VIdentifier (i, True)
+                then VIdentifier (i, Prelude.False)
+                else VIdentifier (i, Prelude.True)
 
 createIdNode :: TypedId -> Value -> Node
 createIdNode ti v@(VIdentifier (s, _)) =
@@ -188,6 +195,8 @@ createPrimary :: TypedId -> Primary -> (Value, TypedId)
 createPrimary ti (PId i) =
     (VPrimary (createIdNode ti (createId ti i)), ti)
 createPrimary ti (PLit l) = (VPrimary (createLiteralNode (createLiteral l)), ti)
+createPrimary ti (PBoolean b) =
+    (VPrimary (Node TBool (createBoolean b)), ti)
 createPrimary ti (PExprs es) =
     let (exprs, newTi) = createExprs ti es
     in (VPrimary (createExprsNode exprs), newTi)
@@ -402,6 +411,7 @@ createExprsNode v@(VExprs [Node t VWhileExpr {}]) = Node t v
 createExprsNode v@(VExprs [Node t VForExpr {}]) = Node t v
 createExprsNode v@(VExprs [Node t VIfExpr {}]) = Node t v
 createExprsNode v@(VExprs (reverse -> ((Node t VExpr {}):_))) = Node t v
+createExprsNode (VExprs [Error s]) = Error s
 createExprsNode (VError s) = Error s
 createExprsNode _ = Error "Typing of Exprs failed"
 
@@ -475,6 +485,11 @@ createDefsNode :: Value -> Node
 createDefsNode v@(VDefs (Node t _) _) = Node t v
 createDefsNode _ = Error "Typing of Defs failed"
 
+-- create Coms
+
+createComs :: Coms -> Value
+createComs = VComs
+
 -- create Kdefs
 
 createKdefs :: TypedId -> Kdefs -> (Value, TypedId)
@@ -486,10 +501,14 @@ createKdefs ti (KDefs d) =
         defsNode = createDefsNode defs
 createKdefs ti (KExprs es) = let (exprs, newTi) = createExprs ti es
                              in (VKdefs (createExprsNode exprs), newTi)
+createKdefs ti (KComs c) = (VKdefs (Node TNone (createComs c)), ti)
 
-createKdefsNode :: Value -> Node 
+createKdefsNode :: Value -> Node
 createKdefsNode v@(VKdefs (Node t (VDefs _ _))) = Node t v
 createKdefsNode v@(VKdefs (Node t (VExprs _))) = Node t v
+createKdefsNode v@(VKdefs (Node t (VComs _))) = Node t v
+createKdefsNode (VKdefs (Error s)) = Error s
+createKdefsNode (VError s) = Error s
 createKdefsNode _ = Error "Typing of Kdefs failed"
 
 -- create Stmt
@@ -504,7 +523,7 @@ createStmt ti (k:ks) = case createStmt newTi ks of
 createStmt ti [] = (VStmt [], ti)
 
 createStmtNode :: Value -> Node
-createStmtNode v@(VStmt (reverse -> (kdef:_))) = Node (getNodeType kdef) v
+createStmtNode v@(VStmt (reverse -> kdefs)) = Node (getKdefsArrayType kdefs) v
 createStmtNode _ = Error "Typing of Kdefs failed"
 
 -- turn list of type into function type
@@ -542,6 +561,12 @@ getExprType (t:ts) = let restType = getExprType ts
                         then t
                         else TError "Typing of Expr failed"
 getExprType [] = TError "Typing of Expr failed"
+
+getKdefsArrayType :: [Node] -> Type 
+getKdefsArrayType ((Node _ (VKdefs (Node _ (VComs _)))):kdefss) =
+    getKdefsArrayType kdefss
+getKdefsArrayType (kdefs:_) = getNodeType kdefs
+getKdefsArrayType [] = TNone
 
 -- add new Typed Id
 

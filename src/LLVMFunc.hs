@@ -76,7 +76,7 @@ import Prelude hiding (mod)
 
 -- OUT IMPORTS
 
-import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration)
+import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration, Boolean (..))
 import LLVM.AST.AddrSpace
 import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
 
@@ -106,6 +106,13 @@ nodeToVal (Error s) = error s
 nodeToType :: Node -> Data.Type
 nodeToType (Node t _) = t
 nodeToType (Error s) = error s
+
+-------- BOOLEAN
+
+boolToLLVM :: Node -> Codegen Operand
+boolToLLVM (Node TBool (VBoolean Data.True)) = return $ bit 1
+boolToLLVM (Node TBool (VBoolean Data.False)) = return $ bit 0
+boolToLLVM n = error (getErrorMessage "Boolean" n)
 
 -------- DECIMAL CONST
 
@@ -171,6 +178,7 @@ getIdentifier n = error ("Recuperation of Identifier string failed" ++ show n)
 
 primaryToLLVM :: Node -> Codegen Operand
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VLiteral _)))) = litToLLVM n
+primaryToLLVM (Node _ (VPrimary b@(Node _ (VBoolean _)))) = boolToLLVM b
 primaryToLLVM (Node _ (VPrimary i@(Node _ (VIdentifier _)))) =
     loadIdentifierValue i
 primaryToLLVM (Node _ (VPrimary n@(Node _ (VExprs _)))) = exprsToLLVM n
@@ -488,21 +496,24 @@ parametersToString list = (show . snd) <$> list
 
 -------- KDEFS
 
-kdefsToLLVM :: Node -> Codegen Operand
-kdefsToLLVM (Node _ (VKdefs es@(Node _ (VExprs _)))) = exprsToLLVM es
-kdefsToLLVM (Node _ (VKdefs d@(Node _ (VDefs _ _)))) = do
+kdefsToLLVM :: Node -> Operand -> Codegen Operand
+kdefsToLLVM (Node _ (VKdefs es@(Node _ (VExprs _)))) _ = exprsToLLVM es
+kdefsToLLVM (Node _ (VKdefs d@(Node _ (VDefs _ _)))) _ = do
     let _ = defsToLLVM d
     return $ int32 0
-kdefsToLLVM n = error (getErrorMessage "Kdefs" n)
+kdefsToLLVM (Node _ (VKdefs (Node _ (VComs _)))) prevRes = return prevRes
+kdefsToLLVM n _ = error (getErrorMessage "Kdefs" n)
 
 -------- STMT
 
-stmtToLLVM :: Node -> Codegen Operand
-stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : rest))) =
+stmtToLLVM :: Node -> Operand -> Codegen Operand
+stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : rest))) prevRes =
     case rest of
-        [] -> kdefsToLLVM kdefs
-        _ -> kdefsToLLVM kdefs >> stmtToLLVM (Node t (VStmt rest))
-stmtToLLVM n = error (getErrorMessage "Stmt" n)
+        [] -> kdefsToLLVM kdefs prevRes
+        _ -> do
+            result <- kdefsToLLVM kdefs prevRes
+            stmtToLLVM (Node t (VStmt rest)) result
+stmtToLLVM n _ = error (getErrorMessage "Stmt" n)
 
 -------- DATA MANAGEMENT
 

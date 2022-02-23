@@ -31,6 +31,7 @@ data Type = TUndefine
 data Value =
     VStmt [Node]
   | VKdefs Node
+  | VComs String
   | VDefs Node Node
   | VPrototype Node Node
   | VPrototypeArgs [(Node, Node)] Node
@@ -48,6 +49,7 @@ data Value =
   | VDecimalConst Int
   | VDoubleConst Double
   | VLiteral Node
+  | VBoolean Boolean
   | VBinop Binop
   | VUnop Unop
   | VError String
@@ -62,7 +64,10 @@ type Stmt = [Kdefs]
 -- 'def' defs ';' | expressions ';'
 data Kdefs = KDefs Defs
     | KExprs Exprs
+    | KComs Coms
     deriving (Show, Eq)
+
+type Coms = String
 
 -- prototype expressions
 data Defs = Defs Prototype Exprs
@@ -117,6 +122,7 @@ type CallExpr = [Expr]
 -- identifier | literal | '(' expressions ')'
 data Primary = PId Identifier
     | PLit Literal
+    | PBoolean Boolean
     | PExprs Exprs
     deriving (Show, Eq)
 
@@ -125,14 +131,17 @@ type Identifier = String
 
 type IsDeclaration = Bool
 
+--  decimal_const | double_const
+data Literal = LInt DecimalConst | LDouble DoubleConst
+    deriving (Show, Eq)
+
 -- [0 - 9]+
 type DecimalConst = Int
 
 -- ( decimal_const dot [0 - 9]* | dot [0 - 9]+ )
 type DoubleConst = Double
 
---  decimal_const | double_const
-data Literal = LInt DecimalConst | LDouble DoubleConst
+data Boolean = True | False
     deriving (Show, Eq)
 
 data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
