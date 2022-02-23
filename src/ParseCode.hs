@@ -1,22 +1,55 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wall #-}
 module ParseCode where
 
 -- Import
 
-import Control.Applicative
+import Control.Applicative ( Alternative((<|>)) )
 
 import Parser
+    ( parseAnd,
+      parseAnyChar,
+      parseChar,
+      parseEnd,
+      parseInt,
+      parseOnlyDotDouble,
+      parseSome,
+      parseSomeOut,
+      parseString,
+      Parser )
 import Data
+    ( Unop(..),
+      Binop(..),
+      Literal(..),
+      DoubleConst,
+      DecimalConst,
+      Identifier,
+      Primary(..),
+      CallExpr,
+      Postfix(..),
+      Unary(..),
+      Expr(..),
+      WhileExpr(..),
+      IfExpr(..),
+      ForExpr(..),
+      Exprs(..),
+      ArgsType(..),
+      PrototypeArgs(..),
+      Prototype(..),
+      Defs(..),
+      Kdefs(..),
+      Stmt )
 
 -- parseStmt
 
 parseStmt :: Parser Stmt
-parseStmt = parseSome parseKdefs
+parseStmt = parseSome parseKdefs <* parseWithSpaces parseEnd
 
 -- parseKdefs
 
 parseKdefs :: Parser Kdefs
-parseKdefs = KDefs <$> (parseTextWithSpaces "def " *> parseDefs <* parseTextWithSpaces ";")
+parseKdefs = KDefs <$> (parseTextWithSpacesAfter "def"
+                            *> parseDefs <* parseTextWithSpaces ";")
     <|> KExprs <$> (parseExprs <* parseTextWithSpaces ";")
 
 -- parseDefs
@@ -63,9 +96,10 @@ parseExprs = EForExpr <$> parseForExpr
 -- parseForExpr
 
 parseForExpr :: Parser ForExpr
-parseForExpr = ForExpr <$> (parseTextWithSpaces "for " *> parseIdAndExpr "=")
+parseForExpr = ForExpr <$> (parseTextWithSpacesAfter "for"
+                                *> parseIdAndExpr "=")
                             <*> (parseComma *> parseIdAndExpr "<" <* parseComma)
-                            <*> (parseExpr <* parseTextWithSpaces "in ")
+                            <*> (parseExpr <* parseTextWithSpacesAround "in")
                             <*> parseExprs
     where
         parseIdAndExpr s =
@@ -77,18 +111,18 @@ parseForExpr = ForExpr <$> (parseTextWithSpaces "for " *> parseIdAndExpr "=")
 parseIfExpr :: Parser IfExpr
 parseIfExpr = createIfExpr
         <$> parseIfThen
-        <*> (Just <$> (parseTextWithSpaces "else " *> parseExprs))
+        <*> (Just <$> (parseTextWithSpacesAround "else" *> parseExprs))
     <|> (`createIfExpr` Nothing) <$> parseIfThen
     where
-        parseIfThen = (,) <$> (parseTextWithSpaces "if " *> parseExpr)
-                          <*> (parseTextWithSpaces "then " *> parseExprs)
+        parseIfThen = (,) <$> (parseTextWithSpacesAfter "if" *> parseExpr)
+                          <*> (parseTextWithSpacesAround "then" *> parseExprs)
         createIfExpr (i, t) e = IfExpr i t e
 
 -- parseWhileExpr
 
 parseWhileExpr :: Parser WhileExpr
-parseWhileExpr = WhileExpr <$> (parseTextWithSpaces "while " *> parseExpr)
-                           <*> (parseTextWithSpaces "do " *> parseExprs)
+parseWhileExpr = WhileExpr <$> (parseTextWithSpacesAfter "while" *> parseExpr)
+                           <*> (parseTextWithSpacesAround "do" *> parseExprs)
 
 -- parseExpr
 
@@ -111,8 +145,8 @@ parsePostfix = (\p c -> Postfix p (Just c)) <$> parsePrimary <*> parseCallExpr
 -- parseCallExpr
 
 parseCallExpr :: Parser CallExpr
-parseCallExpr =  parseOP *> parseListOfExprs <* parseCP
-    <|> const [] <$ parseOP <*> parseCP
+parseCallExpr =  parseChar '(' *> parseListOfExprs <* parseCP
+    <|> const [] <$ parseChar '(' <*> parseCP
     where
         parseListOfExprs = (:) <$> (parseWithSpaces parseExpr
                 <* parseTextWithSpaces ",") <*> parseListOfExprs
@@ -128,8 +162,8 @@ parsePrimary = PId <$> parseIdentifier
 -- parseIdentifier
 
 parseIdentifier :: Parser Identifier
-parseIdentifier = (:) <$> parseAnyChar allLetters
-        <*> parseWithSpaces (parseSome (parseAnyChar allAlphaNums))
+parseIdentifier = (:) <$> parseWithSpaces (parseAnyChar allLetters)
+        <*> parseSome (parseAnyChar allAlphaNums)
     <|> (:[]) <$> parseWithSpaces (parseAnyChar allLetters)
     where
         allLetters = ['a' .. 'z'] ++ ['A' .. 'Z']
@@ -173,11 +207,21 @@ parseUnop = Not <$ parseWithSpaces (parseChar '!')
 -- Minor parsers
 
 parseWithSpaces :: Parser a -> Parser a
-parseWithSpaces p = p <* parseSomeOut (parseAnyChar " \t")
+parseWithSpaces p = parseSomeOut (parseAnyChar " \t") *> p
     <|> p
 
 parseTextWithSpaces :: String -> Parser String
 parseTextWithSpaces s = parseWithSpaces (parseString s)
+
+parseTextWithSpacesAfter :: String -> Parser String
+parseTextWithSpacesAfter s = parseWithSpaces (parseString (s ++ " "))
+    <|> parseWithSpaces (parseString (s ++ "\t"))
+
+parseTextWithSpacesAround :: String -> Parser String
+parseTextWithSpacesAround s =
+        parseAnyChar " \t" *> parseWithSpaces parseStringWithSpaceAfter
+    where
+        parseStringWithSpaceAfter = parseString s <* parseAnyChar " \t"
 
 parseOP :: Parser Char
 parseOP = parseWithSpaces (parseChar '(')

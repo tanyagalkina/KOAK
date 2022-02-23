@@ -1,0 +1,22 @@
+def getNumSize(num : int) : int
+    size = 0 :
+    (while num != 0
+    do num = num / 10 : size = size + 1) :
+    size ;
+
+def modulo(num1 : int, num2 : int) : int
+    tmp1 = num1 / num2 :
+    tmp2 = tmp1 * num2 :
+    tmp3 = num1 - tmp2 :
+    tmp3 ;
+
+def print(osef : int) : void
+    0;
+
+def printNum(num : int, size : int) : int
+    tmp = num / (10 * size) :
+    (while tmp != 0
+    do print(modulo(tmp, 10)) : size = size - 1 : tmp = num / (10 * size)) :
+    size ;
+
+printNum(12);

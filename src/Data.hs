@@ -2,6 +2,11 @@ module Data where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified LLVM.AST.IntegerPredicate as Sicmp
+import LLVM.AST ( Operand )
+import LLVM.AST.Type as LType ()
+import LLVM.IRBuilder ( ModuleBuilder, IRBuilderT )
+import Control.Monad.Reader ( ReaderT )
 
 -- FOR BETTER SHOW
 -- import Text.Pretty.Simple (pPrint)
@@ -9,7 +14,7 @@ import qualified Data.Map as Map
 
 type AST = Node
 
-data Node = Node Type Value
+data Node = Node Data.Type Value
     | Error String
     deriving (Show, Eq)
 
@@ -19,7 +24,8 @@ data Type = TUndefine
     | TVoid
     | TDouble
     | TInteger
-    | TFunc [Type]
+    | TBool
+    | TFunc [Data.Type]
     deriving (Show, Eq)
 
 data Value =
@@ -38,7 +44,7 @@ data Value =
   | VPostfix Node Node
   | VCallExpr [Node]
   | VPrimary Node
-  | VIdentifier String
+  | VIdentifier (String, IsDeclaration)
   | VDecimalConst Int
   | VDoubleConst Double
   | VLiteral Node
@@ -48,7 +54,7 @@ data Value =
   | VNothing
     deriving (Show, Eq)
 
-type TypedId = Map Identifier Type
+type TypedId = Map Identifier Data.Type
 
 -- kdefs* #eof
 type Stmt = [Kdefs]
@@ -93,7 +99,7 @@ data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
 data WhileExpr = WhileExpr Expr Exprs
     deriving (Show, Eq)
 
--- unary (# binop ( unary ) )*
+-- unary (#binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
     deriving (Show, Eq)
 
@@ -117,6 +123,8 @@ data Primary = PId Identifier
 -- [a - z A - Z][a - z A - Z 0 - 9]*
 type Identifier = String
 
+type IsDeclaration = Bool
+
 -- [0 - 9]+
 type DecimalConst = Int
 
@@ -126,9 +134,15 @@ type DoubleConst = Double
 --  decimal_const | double_const
 data Literal = LInt DecimalConst | LDouble DoubleConst
     deriving (Show, Eq)
-    
+
 data Binop = Mul | Div | Add | Sub | Gt | Lt | Eq | Neq | Assign
     deriving (Show, Eq)
 
 data Unop = Not | Minus
     deriving (Show, Eq)
+
+-- LLVM Data
+
+type AssignedValues = Map String Operand
+
+type Codegen = ReaderT AssignedValues (IRBuilderT ModuleBuilder)

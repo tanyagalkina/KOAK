@@ -1,4 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
 module Parser where
 
 -- Import
@@ -46,8 +49,8 @@ parseAnyChar :: String -> Parser Char
 parseAnyChar = foldr ((<|>) . parseChar) (Parser (const Nothing))
 
 parseString :: String -> Parser String
-parseString s@(x:xs) = (:) <$> parseChar x <*> parseString xs
-parseString [] = Parser $ \s -> Just ("", s)
+parseString =
+    foldr (\x -> (<*>) ((:) <$> parseChar x)) (Parser (\s -> Just ("", s)))
 
 parseAnd :: Parser a -> Parser b -> Parser (a,b)
 parseAnd = parseAndWith (,)
@@ -62,7 +65,12 @@ parseSome :: Parser a -> Parser [a]
 parseSome p = (:) <$> p <*> parseMany p
 
 parseSomeOut :: Parser a -> Parser [a]
-parseSomeOut p = (\x xs -> []) <$> p <*> parseMany p
+parseSomeOut p = (\_ _ -> []) <$> p <*> parseMany p
+
+parseEnd :: Parser Char
+parseEnd = Parser $ \case
+                        [] -> Just ('e', "")
+                        _ -> Nothing
 
 -- Numeric Parser
 

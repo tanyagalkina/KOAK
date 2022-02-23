@@ -1,0 +1,8 @@
+idx = 5;
+plouf = 6;
+
+if idx == plouf
+then idx = 1
+else idx = 2;
+
+idx;

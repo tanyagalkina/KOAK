@@ -1,2 +1,7 @@
 koak
 .stack-work
+koak.ll
+koak.o
+a.out
+my.o
+my.ll
