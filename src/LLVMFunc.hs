@@ -389,6 +389,8 @@ whileToLLVM n = error (getErrorMessage "While Expr" n)
 forToLLVM :: Node -> Codegen Operand
 forToLLVM (Node _ (VForExpr (itName, itVal) (condName, (Node _ (VExpr condVal _))) act instrs)) = mdo
     itVal' <- exprToLLVM itVal
+    -- br start
+
     start <- block `named` "for.head"
     br begin
 
@@ -396,7 +398,6 @@ forToLLVM (Node _ (VForExpr (itName, itVal) (condName, (Node _ (VExpr condVal _)
     loopVal <- phi [(itVal', start), (updatedVal, begin)]
 
     res <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ gtToLLVM condVal loopVal >>= \x -> icmp Sicmp.NE x (bit 0) `named` "test_block"
-
     condBr res bodyStart end
 
     bodyStart <- block `named` "for.body"

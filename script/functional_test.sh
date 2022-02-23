@@ -76,7 +76,7 @@ test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
 #test "data/examples/exprExamples/exprExample2.koak" "TO DO"
 #test "data/examples/exprExamples/exprExample3.koak" "1"
 
-#test "data/examples/whileExprExample.koak" "TO DO"
+test "data/examples/whileExprExample.koak" "5"
 
 test "data/examples/ifExprExamples/ifExprExample1.koak" "2"
 test "data/examples/ifExprExamples/ifExprExample2.koak" "1"

@@ -42,6 +42,7 @@ import Data (Value(VStmt), AST, Node (..), Codegen)
 
 astToLLVM :: AST -> IO ()
 astToLLVM instr = do
+    callCommand "./script/clear.sh"
     let mod = buildModule "koakModule" $ compileModule' instr
     withContext $ \ctx ->
         withModuleFromAST ctx mod $ \mod' -> do
