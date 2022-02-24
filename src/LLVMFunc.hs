@@ -300,7 +300,7 @@ subToLLVm u@(Node t (VUnary _ _)) b = mdo
     case t of
         TInteger -> sub a b
         TDouble -> fsub a b
-        TBool -> sub a b -- WHAT DOES IT MEAN?
+        TBool -> sub a b
         _ -> error (getErrorMessage "Sub" (Error ""))
 subToLLVm _ _ = error (getErrorMessage "Sub" (Error ""))
 
