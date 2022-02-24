@@ -337,7 +337,7 @@ gtToLLVM :: Node -> Operand -> Codegen Operand
 gtToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.SGT a b
-        TDouble -> fcmp OGT a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp OGT a b-- >>= \x -> uitofp x Type.double
         TBool -> icmp Sicmp.SGT a b
         _ ->  error (getErrorMessage "Gt" (Error ""))
 gtToLLVM n _ = error (getErrorMessage "Gt" n)
@@ -347,7 +347,7 @@ ltToLLVM :: Node -> Operand -> Codegen Operand
 ltToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.SLT a b
-        TDouble -> fcmp OLT  a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp OLT  a b-- >>= \x -> uitofp x Type.double
         TBool -> icmp Sicmp.SLT a b
         _ ->  error (getErrorMessage "Lt" (Error ""))
 ltToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
@@ -356,7 +356,7 @@ eqToLLVM :: Node -> Operand -> Codegen Operand
 eqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.EQ a b
-        TDouble -> fcmp OEQ a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp OEQ a b-- >>= \x -> uitofp x Type.double
         TBool -> icmp Sicmp.EQ a b
         _ ->  error (getErrorMessage "Eq" (Error ""))
 eqToLLVM _ _ = error (getErrorMessage "Eq" (Error ""))
@@ -365,7 +365,7 @@ neqToLLVM :: Node -> Operand -> Codegen Operand
 neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
     case t of
         TInteger -> icmp Sicmp.NE a b
-        TDouble -> fcmp ONE  a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp ONE  a b-- >>= \x -> uitofp x Type.double
         TBool -> icmp Sicmp.NE a b
         _ ->  error (getErrorMessage "Neq" (Error ""))
 neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
