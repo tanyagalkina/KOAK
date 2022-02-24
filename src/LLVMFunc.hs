@@ -530,10 +530,12 @@ stmtDefsToLLVM (Node t (VStmt list)) =
 stmtDefsToLLVM n = error (getErrorMessage "Stmt" n)
 
 stmtRestToLLVM :: Node -> Operand -> Codegen Operand
-stmtRestToLLVM (Node t (VStmt list)) prevRes =
+stmtRestToLLVM (Node t (VStmt list)) prevRes = do
     case list of
-        ((Node _ (VKdefs (Node _ (VDefs _ _)))):_)
+        [(Node _ (VKdefs (Node _ (VDefs _ _))))]
             -> return (int32 0)
+        ((Node _ (VKdefs (Node _ (VDefs _ _)))):rest)
+            -> stmtRestToLLVM (Node t (VStmt rest)) prevRes
         [kdefs] -> kdefsToLLVM kdefs prevRes
         (kdefs:rest) -> do
              result <- kdefsToLLVM kdefs prevRes
