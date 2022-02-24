@@ -14,20 +14,20 @@ import LLVM.Relocation as R
 import LLVM.CodeModel as C
 
 import LLVM.IRBuilder as IRB
-import LLVM.IRBuilder.Module
-import LLVM.IRBuilder.Instruction
+-- import LLVM.IRBuilder.Module
+-- import LLVM.IRBuilder.Instruction
 
-import LLVM.AST
-import LLVM.AST.Type as Type
+-- import LLVM.AST
+-- import LLVM.AST.Type as Type
 
 -- IMPORT CONTROL.MONAD
 
-import Control.Monad.Reader (ReaderT (runReaderT))
+-- import Control.Monad.Reader (ReaderT (runReaderT))
 
 -- IMPORT DATA
 
 import qualified Data.IntMap()
-import qualified Data.Map as Map
+-- import qualified Data.Map as Map
 
 -- OTHER IMPORTS
 
@@ -38,7 +38,7 @@ import System.Process
 -- OUR IMPORTS
 
 import LLVMFunc
-import Data (Value(VStmt), AST, Node (..), Codegen, Type (..))
+import Data (Value(VStmt), AST, Node (..))
 
 
 astToLLVM :: AST -> IO ()
@@ -54,29 +54,6 @@ astToLLVM instr = do
 
 
 compileModule :: AST -> ModuleBuilder ()
-compileModule instr = do
-    let state = Map.fromList [("test", int32 0)]
-    _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
-        res <- runReaderT (compileInstrs instr) state
-        _ <- runReaderT (printResult instr res) state
-        ret (int32 0)
-    pure ()
-
-printResult :: AST -> Operand -> Codegen ()
-printResult instr res = do
-    case instr of
-        (Node TInteger _) -> printFunc "printInt" i32
-        (Node TBool _) -> printFunc "printBool" i32
-        (Node TDouble _) -> printFunc "printDouble" Type.double
-        _ -> do
-            pure ()
-    where
-        printFunc name argType = do
-            printFuncPtr <- extern name [argType] void
-            _ <- LLVM.IRBuilder.Instruction.call printFuncPtr [(res,[])]
-            pure ()
-
-compileInstrs :: AST -> Codegen Operand
-compileInstrs instr = case instr of
+compileModule instr = case instr of
     stmt@(Data.Node _ (VStmt _)) -> stmtToLLVM stmt (int32 0)
     _ -> error "ERROR"

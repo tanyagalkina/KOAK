@@ -76,7 +76,7 @@ import Prelude hiding (mod)
 
 -- OUT IMPORTS
 
-import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration, Boolean (..))
+import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration, Boolean (..), AST)
 import LLVM.AST.AddrSpace
 import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
 
@@ -204,7 +204,7 @@ postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
 postfixToLLVM (Node _ (VPostfix n c)) = do
-    let ty    = FunctionType i32 [] False  -- TODO : replace empty list by list of LLVM.Type of the function's parameters
+    let ty    = FunctionType i32 [] Prelude.False  -- TODO : replace empty list by list of LLVM.Type of the function's parameters
     let ptrTy = Type.PointerType ty (AddrSpace 0)
     let ref = GlobalReference ptrTy (fromString $ fst $ getIdentifier n)
     funcArgs <- callExprToLLVM c
@@ -373,7 +373,7 @@ assignToLLVM u@(Node t _) val = mdo
         withReaderT (Map.insert idString newVarPtr) $ myLoad newVarPtr
     else do
         updateIdentifier (Node t (VIdentifier (idString, isDec))) val
-assignToLLVM _ _ = error "Assign unknown type"
+assignToLLVM _ _ = error (getErrorMessage "Assign" (Error ""))
 
 -------- WHILE
 
@@ -483,7 +483,7 @@ prototypeToLLVM n = error (getErrorMessage "Prototype" n)
 defsToLLVM :: Node -> ModuleBuilder Operand
 defsToLLVM (Node _ (VDefs p es)) = mdo
     let funcName = fst $ getIdentifier p
-    let (pars, returnType) = prototypeArgsToLLVM p
+    let (pars, returnType) = prototypeToLLVM p
     fn <- LLVM.IRBuilder.Module.function (mkName funcName) pars
                                                            returnType
                                                            $ \funcArgs -> do
@@ -499,22 +499,64 @@ parametersToString list = (show . snd) <$> list
 
 kdefsToLLVM :: Node -> Operand -> Codegen Operand
 kdefsToLLVM (Node _ (VKdefs es@(Node _ (VExprs _)))) _ = exprsToLLVM es
-kdefsToLLVM (Node _ (VKdefs d@(Node _ (VDefs _ _)))) _ = do
-    let _ = defsToLLVM d
-    return $ int32 0
 kdefsToLLVM (Node _ (VKdefs (Node _ (VComs _)))) prevRes = return prevRes
 kdefsToLLVM n _ = error (getErrorMessage "Kdefs" n)
 
+kdefsDefsToLLVM :: Node -> ModuleBuilder Operand
+kdefsDefsToLLVM (Node _ (VKdefs d@(Node _ (VDefs _ _)))) = do
+    defsToLLVM d
+kdefsDefsToLLVM n = error (getErrorMessage "Kdefs" n)
+
 -------- STMT
 
-stmtToLLVM :: Node -> Operand -> Codegen Operand
-stmtToLLVM (Node t (VStmt (kdefs@(Node _ (VKdefs _)) : rest))) prevRes =
-    case rest of
-        [] -> kdefsToLLVM kdefs prevRes
-        _ -> do
-            result <- kdefsToLLVM kdefs prevRes
-            stmtToLLVM (Node t (VStmt rest)) result
+stmtToLLVM :: Node -> Operand -> ModuleBuilder ()
+stmtToLLVM n@(Node _ (VStmt _)) prevRes = do
+    let state = Map.empty
+    _ <- stmtDefsToLLVM n
+    _ <- LLVM.IRBuilder.Module.function "main" [(i32, "argc"), (ptr (ptr i8), "argv")] i32 $ \[_, _] -> do
+        res <- runReaderT (stmtRestToLLVM n prevRes) state
+        _ <- runReaderT (printResult n res) state
+        ret (int32 0)
+    pure ()
 stmtToLLVM n _ = error (getErrorMessage "Stmt" n)
+
+stmtDefsToLLVM :: Node -> ModuleBuilder Operand
+stmtDefsToLLVM (Node t (VStmt list)) =
+    case list of
+        [kdefs@(Node _ (VKdefs (Node _ (VDefs _ _))))] -> kdefsDefsToLLVM kdefs
+        (kdefs@(Node _ (VKdefs (Node _ (VDefs _ _)))):rest)
+            -> kdefsDefsToLLVM kdefs >> stmtDefsToLLVM (Node t (VStmt rest))
+        [] -> return (int32 0)
+        (_:rest) -> stmtDefsToLLVM (Node t (VStmt rest))
+stmtDefsToLLVM n = error (getErrorMessage "Stmt" n)
+
+stmtRestToLLVM :: Node -> Operand -> Codegen Operand
+stmtRestToLLVM (Node t (VStmt list)) prevRes =
+    case list of
+        ((Node _ (VKdefs (Node _ (VDefs _ _)))):_)
+            -> return (int32 0)
+        [kdefs] -> kdefsToLLVM kdefs prevRes
+        (kdefs:rest) -> do
+             result <- kdefsToLLVM kdefs prevRes
+             stmtRestToLLVM (Node t (VStmt rest)) result
+        [] -> return (int32 0)
+stmtRestToLLVM n _ = error (getErrorMessage "Stmt" n)
+
+-------- PRINT RESULT
+
+printResult :: AST -> Operand -> Codegen ()
+printResult instr res = do
+    case instr of
+        (Node TInteger _) -> printFunc "printInt" i32
+        (Node TBool _) -> printFunc "printBool" i32
+        (Node TDouble _) -> printFunc "printDouble" Type.double
+        _ -> do
+            pure ()
+    where
+        printFunc name argType = do
+            printFuncPtr <- extern name [argType] Type.void
+            _ <- LLVM.IRBuilder.Instruction.call printFuncPtr [(res,[])]
+            pure ()
 
 -------- DATA MANAGEMENT
 
