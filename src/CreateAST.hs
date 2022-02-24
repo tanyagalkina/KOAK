@@ -160,6 +160,7 @@ createLiteral (LInt i) =
     VLiteral (Node TInteger (createDecimalConst i))
 createLiteral (LDouble d) =
     VLiteral (Node TDouble (createDoubleConst d))
+    
 
 createLiteralNode :: Value -> Node
 createLiteralNode v@(VLiteral (Node TInteger _)) = Node TInteger v

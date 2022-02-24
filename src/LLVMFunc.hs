@@ -271,7 +271,18 @@ opToLLVM op u o = mdo
         fct Data.Sub = subToLLVm
         fct Data.Mul = mulToLLVM
         fct Data.Div = divToLLVM
+        fct Data.Mod = modToLLVM
         fct _ = error (getErrorMessage "Binop" (Error ""))
+
+modToLLVM :: Node -> Operand -> Codegen Operand
+modToLLVM u@(Node t (VUnary _ _)) b = mdo
+    a <- unaryToLLVM u
+    case t of
+        TInteger -> urem a b
+        TDouble -> frem a b
+        TBool -> urem a b
+        _ -> error (getErrorMessage "Mod" (Error ""))
+modToLLVM _ _ = error (getErrorMessage "Mod" (Error ""))
 
 addToLLVM :: Node -> Operand -> Codegen Operand
 addToLLVM u@(Node t (VUnary _ _)) b = mdo
