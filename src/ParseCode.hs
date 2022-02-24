@@ -38,7 +38,8 @@ import Data
       Prototype(..),
       Defs(..),
       Kdefs(..),
-      Stmt )
+      Stmt,
+      Boolean (..), Coms)
 
 -- parseStmt
 
@@ -48,9 +49,18 @@ parseStmt = parseSome parseKdefs <* parseWithSpaces parseEnd
 -- parseKdefs
 
 parseKdefs :: Parser Kdefs
-parseKdefs = KDefs <$> (parseTextWithSpacesAfter "def"
+parseKdefs = KComs <$> (parseTextWithSpaces "#"
+                            *> parseComs <* parseTextWithSpaces "#")
+    <|> KDefs <$> (parseTextWithSpacesAfter "def"
                             *> parseDefs <* parseTextWithSpaces ";")
     <|> KExprs <$> (parseExprs <* parseTextWithSpaces ";")
+
+-- parseComs
+
+parseComs :: Parser Coms
+parseComs = parseSome (parseAnyChar allComsChars)
+    where
+        allComsChars = [' ' .. '"'] ++ ['$' .. ':'] ++ ['<' .. '~']
 
 -- parseDefs
 
@@ -155,7 +165,8 @@ parseCallExpr =  parseChar '(' *> parseListOfExprs <* parseCP
 -- parsePrimary
 
 parsePrimary :: Parser Primary
-parsePrimary = PId <$> parseIdentifier
+parsePrimary = PBoolean <$> parseBoolean
+    <|> PId <$> parseIdentifier
     <|> PLit <$> parseLiteral
     <|> PExprs <$> (parseOP *> parseExprs <* parseCP)
 
@@ -184,6 +195,12 @@ parseDoubleConst = parseWithSpaces parseOnlyDotDouble
 parseLiteral :: Parser Literal
 parseLiteral = LDouble <$> parseDoubleConst
               <|> LInt <$> parseDecimalConst
+
+-- parseBoolean
+
+parseBoolean :: Parser Boolean
+parseBoolean = Data.True <$ parseTextWithSpaces "true"
+    <|> Data.False <$ parseTextWithSpaces "false"
 
 -- parseBinop
 

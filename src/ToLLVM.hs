@@ -65,21 +65,18 @@ compileModule instr = do
 printResult :: AST -> Operand -> Codegen ()
 printResult instr res = do
     case instr of
-        (Node TInteger _) -> printInt
-        (Node TBool _) -> printInt
-        (Node TDouble _) -> do
-            printDouble <- extern "printDouble" [Type.double] void
-            _ <- LLVM.IRBuilder.Instruction.call printDouble [(res,[])]
-            pure ()
+        (Node TInteger _) -> printFunc "printInt" i32
+        (Node TBool _) -> printFunc "printBool" i32
+        (Node TDouble _) -> printFunc "printDouble" Type.double
         _ -> do
             pure ()
     where
-        printInt = do
-            printIntFunc <- extern "printInt" [i32] void
-            _ <- LLVM.IRBuilder.Instruction.call printIntFunc [(res,[])]
+        printFunc name argType = do
+            printFuncPtr <- extern name [argType] void
+            _ <- LLVM.IRBuilder.Instruction.call printFuncPtr [(res,[])]
             pure ()
 
 compileInstrs :: AST -> Codegen Operand
 compileInstrs instr = case instr of
-    stmt@(Data.Node _ (VStmt _)) -> stmtToLLVM stmt
+    stmt@(Data.Node _ (VStmt _)) -> stmtToLLVM stmt (int32 0)
     _ -> error "ERROR"
