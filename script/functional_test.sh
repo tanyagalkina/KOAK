@@ -49,32 +49,34 @@ test "data/examples/numberExamples/numberExample4.koak" "3.14"
 
 test "data/examples/binopExamples/binopExample1.koak" "16"
 test "data/examples/binopExamples/binopExample2.koak" "3"
-#test "data/examples/binopExamples/binopExample3.koak" "3.1"
+test "data/examples/binopExamples/binopExample3.koak" "3.1"
 test "data/examples/binopExamples/binopExample4.koak" "2"
 test "data/examples/binopExamples/binopExample5.koak" "2"
-test "data/examples/binopExamples/binopExample6.koak" "0"
-test "data/examples/binopExamples/binopExample7.koak" "1"
-test "data/examples/binopExamples/binopExample8.koak" "1"
-test "data/examples/binopExamples/binopExample9.koak" "0"
+test "data/examples/binopExamples/binopExample6.koak" "false"
+test "data/examples/binopExamples/binopExample7.koak" "true"
+test "data/examples/binopExamples/binopExample8.koak" "true"
+test "data/examples/binopExamples/binopExample9.koak" "false"
 test "data/examples/binopExamples/binopExample10.koak" "1"
 test "data/examples/binopExamples/binopExample11.koak" "2"
 
 test "data/examples/unaryExamples/unaryExample1.koak" "0"
-test "data/examples/unaryExamples/unaryExample2.koak" "1"
-test "data/examples/unaryExamples/unaryExample3.koak" "0"
-test "data/examples/unaryExamples/unaryExample4.koak" "1"
-test "data/examples/unaryExamples/unaryExample5.koak" "0"
-test "data/examples/unaryExamples/unaryExample6.koak" "1"
+test "data/examples/unaryExamples/unaryExample2.koak" "true"
+test "data/examples/unaryExamples/unaryExample3.koak" "false"
+test "data/examples/unaryExamples/unaryExample4.koak" "true"
+test "data/examples/unaryExamples/unaryExample5.koak" "false"
+test "data/examples/unaryExamples/unaryExample6.koak" "true"
 # ADD UNARY EXAMPLE WITH DOUBLE
 
-test "data/examples/primaryExamples/primaryExample.koak" "2"
+test "data/examples/primaryExamples/primaryExample1.koak" "2"
+test "data/examples/primaryExamples/primaryExample2.koak" "true"
+test "data/examples/primaryExamples/primaryExample3.koak" "false"
 
 #test "data/examples/defsExamples/defsExample1.koak" "TO DO"
 #test "data/examples/defsExamples/defsExample2.koak" "TO DO"
 
 test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
-#test "data/examples/exprExamples/exprExample2.koak" "TO DO"
-#test "data/examples/exprExamples/exprExample3.koak" "1"
+test "data/examples/exprExamples/exprExample2.koak" "6.52"
+test "data/examples/exprExamples/exprExample3.koak" "true"
 
 test "data/examples/whileExprExample.koak" "5"
 
