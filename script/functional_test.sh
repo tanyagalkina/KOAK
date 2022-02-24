@@ -58,6 +58,7 @@ test "data/examples/binopExamples/binopExample8.koak" "true"
 test "data/examples/binopExamples/binopExample9.koak" "false"
 test "data/examples/binopExamples/binopExample10.koak" "1"
 test "data/examples/binopExamples/binopExample11.koak" "2"
+# ADD MODULO
 
 test "data/examples/unaryExamples/unaryExample1.koak" "0"
 test "data/examples/unaryExamples/unaryExample2.koak" "true"
@@ -73,17 +74,20 @@ test "data/examples/primaryExamples/primaryExample3.koak" "false"
 
 #test "data/examples/defsExamples/defsExample1.koak" "TO DO"
 #test "data/examples/defsExamples/defsExample2.koak" "TO DO"
+test "data/examples/defsExamples/defsExample3.koak" "2"
 
 test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
-test "data/examples/exprExamples/exprExample2.koak" "6.52"
-test "data/examples/exprExamples/exprExample3.koak" "true"
+test "data/examples/exprExamples/exprExample2.koak" "6.52" # WITH WRONG EVAL EXPR
+test "data/examples/exprExamples/exprExample3.koak" "true" # WITH WRONG EVAL EXPR
 
 test "data/examples/whileExprExample.koak" "5"
 
 test "data/examples/ifExprExamples/ifExprExample1.koak" "2"
 test "data/examples/ifExprExamples/ifExprExample2.koak" "1"
 
-#test "data/examples/forExprExample.koak" "TO DO"
+test "data/examples/forExprExamples/forExprExample1.koak" "10"
+test "data/examples/forExprExamples/forExprExample2.koak" "5"
+
 #test "data/examples/subjectExample.koak" "TO DO"
 
 # FUNCTIONS

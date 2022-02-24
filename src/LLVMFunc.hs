@@ -152,12 +152,12 @@ updateIdentifier :: Node -> Operand -> Codegen Operand
 updateIdentifier (Node t (VIdentifier (name, _))) val = do
     variables <- ask
     case variables Map.!? name of
-        Just v -> pure v
+        Just _ -> return val
         Nothing -> do
             let myType = typeToLLVMType t
             let var = LocalReference (Type.PointerType myType (AddrSpace 0)) (getName name)
             myStore var val
-            return var
+            return val
     where
         getName = AST.Name . fromString . stringToLLVMVarName
 updateIdentifier n _ = error (getErrorMessage "Identifier" n)
@@ -370,7 +370,7 @@ assignToLLVM u@(Node t _) val = mdo
     then do
         newVarPtr <- alloca myType (Just (Const.int32 1)) 0 `named` fromString idString
         myStore newVarPtr val
-        withReaderT (Map.insert idString newVarPtr) $ myLoad newVarPtr
+        withReaderT (Map.insert idString val) $ myLoad newVarPtr
     else do
         updateIdentifier (Node t (VIdentifier (idString, isDec))) val
 assignToLLVM _ _ = error (getErrorMessage "Assign" (Error ""))
@@ -396,7 +396,7 @@ whileToLLVM n = error (getErrorMessage "While Expr" n)
 -------- FOR
 
 forToLLVM :: Node -> Codegen Operand
-forToLLVM (Node _ (VForExpr (itName, itVal) (condName, (Node _ (VExpr condVal _))) act instrs)) = mdo
+forToLLVM (Node _ (VForExpr (itName, itVal) (_, (Node _ (VExpr condVal _))) act instrs)) = mdo
     start <- currentBlock
     itVal' <- exprToLLVM itVal
     br begin
@@ -409,9 +409,8 @@ forToLLVM (Node _ (VForExpr (itName, itVal) (condName, (Node _ (VExpr condVal _)
     bodyStart <- block `named` "for.body"
     _ <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprsToLLVM instrs `named` "instr_block"
 
-    -- updatedVal <-  withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprToLLVM act `named` "act_block"  -- updatedVal = (name "loopval_0")
-    updatedVal <- add loopVal (int32 1) `named` "act_block" -- updatedVal = (Uname 3)
-    -- error $ "hello " ++ show updatedVal
+    updatedVal <-  withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprToLLVM act `named` "act_block"
+
     bodyEnd <- currentBlock
     br begin
 
