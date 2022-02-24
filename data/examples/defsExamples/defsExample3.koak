@@ -1,0 +1,3 @@
+def mdr() : int
+    2;
+mdr();
