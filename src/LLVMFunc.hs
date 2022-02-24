@@ -389,29 +389,28 @@ whileToLLVM n = error (getErrorMessage "While Expr" n)
 
 forToLLVM :: Node -> Codegen Operand
 forToLLVM (Node _ (VForExpr (itName, itVal) (condName, (Node _ (VExpr condVal _))) act instrs)) = mdo
+    start <- currentBlock
     itVal' <- exprToLLVM itVal
-    -- br start
-
-    start <- block `named` "for.head"
     br begin
 
     begin <- block `named` "for.begin"
-    loopVal <- phi [(itVal', start), (updatedVal, begin)]
-
+    loopVal <- phi [(itVal', start), (updatedVal, bodyEnd)] `named` "loopVal"
     res <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ gtToLLVM condVal loopVal >>= \x -> icmp Sicmp.NE x (bit 0) `named` "test_block"
     condBr res bodyStart end
 
     bodyStart <- block `named` "for.body"
-    final <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprsToLLVM instrs `named` "instr_block"
+    _ <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprsToLLVM instrs `named` "instr_block"
 
-    updatedVal <-  withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprToLLVM act `named` "act_block"
+    -- updatedVal <-  withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprToLLVM act `named` "act_block"  -- updatedVal = (name "loopval_0")
+    updatedVal <- add loopVal (int32 1) `named` "act_block" -- updatedVal = (Uname 3)
+    -- error $ "hello " ++ show updatedVal
     bodyEnd <- currentBlock
-    -- error $ "hello " ++ show x
     br begin
 
     end <- block `named` "for.end"
-    return final
+    return $ int32 0
 forToLLVM n = error $ getErrorMessage "For Expr" n
+
 
 -------- IF
 
