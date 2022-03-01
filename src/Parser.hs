@@ -8,6 +8,7 @@ module Parser where
 
 import Control.Applicative
 
+
 -- Data
 
 data Parser a = Parser {
@@ -102,6 +103,15 @@ parseFloatStr = parseNum <|> show <$> parseInt
             myConcat = \x y z -> show x ++ [y] ++ z
             parseNum =  myConcat <$> parseInt <*> parseDot <*> parseUIntStr
 
+parseFloatDotStr :: Parser String
+parseFloatDotStr = parseNum 
+        where
+            parseDot = parseChar '.'
+            parseSpace = parseChar ' '
+            myConcat =  \x y _ -> x ++ [y] ++ "0"
+            parseNum =  myConcat <$> parseUIntStr <*> parseDot <*> parseSpace
+
+
 parseDotFloatStr :: Parser String
 parseDotFloatStr = parseNum
         where
@@ -110,7 +120,7 @@ parseDotFloatStr = parseNum
             parseNum =  myConcat <$> parseDot <*> parseUIntStr
 
 parseOnlyDotFloatStr :: Parser String
-parseOnlyDotFloatStr = parseNum <|> parseDotFloatStr
+parseOnlyDotFloatStr = parseNum <|> parseDotFloatStr <|> parseFloatDotStr
         where
             parseDot = parseChar '.'
             myConcat = \x y z -> show x ++ [y] ++ z
@@ -122,8 +132,8 @@ parseFloat = read <$> parseFloatStr
 parseDouble :: Parser Double
 parseDouble = read <$> parseFloatStr
 
-parseDotDouble :: Parser Double
-parseDotDouble = read <$> (parseFloatStr <|> parseDotFloatStr)
+-- parseDotDouble :: Parser Double
+-- parseDotDouble = read <$> (parseFloatStr <|> parseDotFloatStr) 
 
 parseOnlyDotDouble :: Parser Double
 parseOnlyDotDouble = read <$> parseOnlyDotFloatStr

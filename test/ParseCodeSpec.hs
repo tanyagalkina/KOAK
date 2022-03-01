@@ -30,6 +30,24 @@ spec = do
     describe "parseDefs"              testParseDefs
     describe "parseKdefs"             testParseKdefs
     describe "parseStmt"              testParseStmt
+    describe "parseDotNum"            testParseDotNum    
+
+testParseDotNum :: Spec
+testParseDotNum = do
+    it "runParser parseOnlyDotFloatStr \"FloatDot \"" $ do
+        runParser parseOnlyDotFloatStr "42. " `shouldBe` Just ("42.0", "")
+    it "runParser parseOnlyDotFloatStr \"FloatDot \"" $ do
+        runParser parseOnlyDotFloatStr "42. " `shouldBe` Just ("42.0", "")
+    it "runParser parseDotDouble \"Dottet Doubles like in Scheme \"" $ do
+         runParser parseOnlyDotDouble "42.  " `shouldBe` Just (42.0, " ")
+    it "runParser parseDouble \"Dottet Doubles like in Scheme \"" $ do
+         runParser parseDouble "42.42  " `shouldBe` Just (42.42, "  ")
+    it "runParser parseDotDouble \"Dottet Doubles like in Scheme \"" $ do
+        runParser parseOnlyDotDouble "42..  " `shouldBe` Nothing
+    it "runParser parseOnlyDotFloatStr \"FloatDotFail \"" $ do
+        runParser parseOnlyDotFloatStr "42." `shouldBe` Nothing    
+    
+
 
 testParseUnop :: Spec
 testParseUnop = do
