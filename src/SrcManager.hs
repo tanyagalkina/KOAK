@@ -46,9 +46,6 @@ process _ source = do
                                                >> return initErrorModule
       Just (ast, _) -> astToLLVM ast >> return initModule
 
--- process files
-
--- ADD ERROR HANDLING ?
 
 processFiles :: [String] -> IO AST.Module
 processFiles fnames = concatSources "" fnames >>= process initModule
