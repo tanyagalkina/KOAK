@@ -50,6 +50,8 @@ process _ source = do
 processFiles :: [String] -> IO AST.Module
 processFiles fnames = concatSources "" fnames >>= process initModule
 
+
+--OLD VERSION
 -- concatSources :: String -> [String] -> IO String
 -- concatSources base [] = return base
 -- concatSources base (x:xs) = do
@@ -66,7 +68,6 @@ concatSources base (x:xs) = do
                          >> putStr"\ESC[0m" >> return ""
         Right s -> concatSources (base ++ cleanSource) xs
                     where cleanSource = replace '\n' ' ' s
-                    -- concatSources (base ++ cleanSource) xs
 
 
 replace :: Eq b => b -> b -> [b] -> [b]
