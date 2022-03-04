@@ -78,7 +78,7 @@ import Prelude hiding (mod)
 
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration, Boolean (..), AST)
 import LLVM.AST.AddrSpace
-import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
+import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT, OLE, OGE))
 
 
 -------- HELPER
@@ -203,13 +203,29 @@ getAllArguments _ = error (getErrorMessage "Call Expr" (Error ""))
 postfixToLLVM :: Node -> Codegen Operand
 postfixToLLVM (Node _ (VPostfix n (Node _ VNothing))) =
     primaryToLLVM n
-postfixToLLVM (Node _ (VPostfix n c)) = do
-    let ty    = FunctionType i32 [] Prelude.False  -- TODO : replace empty list by list of LLVM.Type of the function's parameters
+postfixToLLVM (Node t (VPostfix n c)) = do
+    let (retType, parsTypes) = getFunctionTypes t
+    let ty    = FunctionType retType parsTypes Prelude.False
     let ptrTy = Type.PointerType ty (AddrSpace 0)
     let ref = GlobalReference ptrTy (fromString $ fst $ getIdentifier n)
     funcArgs <- callExprToLLVM c
     LLVM.IRBuilder.Instruction.call (ConstantOperand ref) funcArgs
 postfixToLLVM n = error (getErrorMessage "Postfix" n)
+
+getFunctionTypes :: Data.Type -> (AST.Type, [AST.Type])
+getFunctionTypes t@(TFunc list) = case last list of
+    TInteger -> (i32, getFunctionParsTypes t)
+    TDouble -> (Type.double, getFunctionParsTypes t)
+    TVoid -> (Type.void, getFunctionParsTypes t)
+    _ -> (i32, getFunctionParsTypes t)
+getFunctionTypes _ = error (getErrorMessage "Postfix" (Error ""))
+
+getFunctionParsTypes :: Data.Type -> [AST.Type]
+getFunctionParsTypes (TFunc [_]) = []
+getFunctionParsTypes (TFunc (TInteger:t)) = i32 : getFunctionParsTypes (TFunc t)
+getFunctionParsTypes (TFunc (TDouble:t)) = Type.double : getFunctionParsTypes (TFunc t)
+getFunctionParsTypes (TFunc (TVoid:t)) = Type.void : getFunctionParsTypes (TFunc t)
+getFunctionParsTypes _ = error (getErrorMessage "Postfix" (Error ""))
 
 ------- UNARY
 
@@ -261,6 +277,8 @@ binopToLLVM u ((b, u'):bus) = do
     case nodeToVal b of
         (VBinop Data.Gt) -> gtToLLVM u restRes
         (VBinop Data.Lt) -> ltToLLVM u restRes
+        (VBinop Data.Ge) -> geToLLVM u restRes
+        (VBinop Data.Le) -> leToLLVM u restRes
         (VBinop Data.Eq) -> eqToLLVM u restRes
         (VBinop Data.Neq) -> neqToLLVM u restRes
         (VBinop Data.Assign) -> assignToLLVM u restRes
@@ -283,10 +301,15 @@ opToLLVM op u o = mdo
         fct Data.Mod = modToLLVM
         fct _ = error (getErrorMessage "Binop" (Error ""))
 
+getTypeAsSingleType :: Data.Type -> Data.Type
+getTypeAsSingleType t = case t of
+    TFunc list -> last list
+    t' -> t'
+
 modToLLVM :: Node -> Operand -> Codegen Operand
 modToLLVM u@(Node t (VUnary _ _)) b = mdo
     a <- unaryToLLVM u
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> urem a b
         TDouble -> frem a b
         TBool -> urem a b
@@ -296,7 +319,7 @@ modToLLVM _ _ = error (getErrorMessage "Mod" (Error ""))
 addToLLVM :: Node -> Operand -> Codegen Operand
 addToLLVM u@(Node t (VUnary _ _)) b = mdo
     a <- unaryToLLVM u
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> add a b
         TDouble -> fadd a b
         TBool -> add a b
@@ -306,7 +329,7 @@ addToLLVM _ _ = error (getErrorMessage "Add" (Error ""))
 subToLLVm :: Node -> Operand -> Codegen Operand
 subToLLVm u@(Node t (VUnary _ _)) b = mdo
     a <- unaryToLLVM u
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> sub a b
         TDouble -> fsub a b
         TBool -> sub a b
@@ -316,7 +339,7 @@ subToLLVm _ _ = error (getErrorMessage "Sub" (Error ""))
 mulToLLVM :: Node -> Operand -> Codegen Operand
 mulToLLVM u@(Node t (VUnary _ _)) b = mdo
     a <- unaryToLLVM u
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> mul a b
         TDouble -> fmul a b
         TBool -> mul a b
@@ -326,7 +349,7 @@ mulToLLVM _ _ = error (getErrorMessage "Mul" (Error ""))
 divToLLVM :: Node -> Operand -> Codegen Operand
 divToLLVM u@(Node t (VUnary _ _)) b = mdo
     a <- unaryToLLVM u
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> sdiv a b
         TDouble -> fdiv a b
         TBool -> sdiv a b
@@ -335,9 +358,9 @@ divToLLVM _ _ = error (getErrorMessage "Div" (Error ""))
 
 gtToLLVM :: Node -> Operand -> Codegen Operand
 gtToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> icmp Sicmp.SGT a b
-        TDouble -> fcmp OGT a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp OGT a b
         TBool -> icmp Sicmp.SGT a b
         _ ->  error (getErrorMessage "Gt" (Error ""))
 gtToLLVM n _ = error (getErrorMessage "Gt" n)
@@ -345,27 +368,47 @@ gtToLLVM n _ = error (getErrorMessage "Gt" n)
 
 ltToLLVM :: Node -> Operand -> Codegen Operand
 ltToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> icmp Sicmp.SLT a b
-        TDouble -> fcmp OLT  a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp OLT  a b
         TBool -> icmp Sicmp.SLT a b
         _ ->  error (getErrorMessage "Lt" (Error ""))
 ltToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
 
+
+geToLLVM :: Node -> Operand -> Codegen Operand
+geToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.SGE a b
+        TDouble -> fcmp OGE a b
+        TBool -> icmp Sicmp.SGE a b
+        _ ->  error (getErrorMessage "Ge" (Error ""))
+geToLLVM n _ = error (getErrorMessage "Ge" n)
+
+leToLLVM :: Node -> Operand -> Codegen Operand
+leToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.SLE a b
+        TDouble -> fcmp OLE a b
+        TBool -> icmp Sicmp.SLE a b
+        _ ->  error (getErrorMessage "Lt" (Error ""))
+leToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
+
+
 eqToLLVM :: Node -> Operand -> Codegen Operand
 eqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> icmp Sicmp.EQ a b
-        TDouble -> fcmp OEQ a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp OEQ a b-- >>= \x -> uitofp x Type.double
         TBool -> icmp Sicmp.EQ a b
         _ ->  error (getErrorMessage "Eq" (Error ""))
 eqToLLVM _ _ = error (getErrorMessage "Eq" (Error ""))
 
 neqToLLVM :: Node -> Operand -> Codegen Operand
 neqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
-    case t of
+    case getTypeAsSingleType t of
         TInteger -> icmp Sicmp.NE a b
-        TDouble -> fcmp ONE  a b >>= \x -> uitofp x Type.double
+        TDouble -> fcmp ONE  a b-- >>= \x -> uitofp x Type.double
         TBool -> icmp Sicmp.NE a b
         _ ->  error (getErrorMessage "Neq" (Error ""))
 neqToLLVM _ _ = error (getErrorMessage "Neq" (Error ""))
@@ -395,13 +438,13 @@ whileToLLVM (Node _ (VWhileExpr e es)) = mdo
     condBr initCond loopB endBlock
 
     loopB <- block `named` "while.start"
-    _ <- exprsToLLVM es
+    res <- exprsToLLVM es
 
     cond <- evalCond
     condBr cond loopB endBlock
 
     endBlock <- block `named` "while.end"
-    return $ int32 0
+    return res
 whileToLLVM n = error (getErrorMessage "While Expr" n)
 
 -------- FOR
@@ -418,7 +461,7 @@ forToLLVM (Node _ (VForExpr (itName, itVal) (_, (Node _ (VExpr condVal _))) act 
     condBr res bodyStart end
 
     bodyStart <- block `named` "for.body"
-    _ <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprsToLLVM instrs `named` "instr_block"
+    res' <- withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprsToLLVM instrs `named` "instr_block"
 
     updatedVal <-  withReaderT (Map.insert (fst $ getIdentifier itName) loopVal) $ exprToLLVM act `named` "act_block"
 
@@ -426,7 +469,7 @@ forToLLVM (Node _ (VForExpr (itName, itVal) (_, (Node _ (VExpr condVal _))) act 
     br begin
 
     end <- block `named` "for.end"
-    return $ int32 0
+    return res'
 forToLLVM n = error $ getErrorMessage "For Expr" n
 
 
@@ -438,15 +481,16 @@ ifToLLVM (Node _ (VIfExpr cond thenInstr elseInstr)) = mdo
     condBr condRes thenBlock elseBlock
 
     thenBlock <- block `named` "if.then"
-    _ <- exprsToLLVM thenInstr
+    thenRes <- exprsToLLVM thenInstr
     br end
 
     elseBlock <- block `named` "if.else"
-    _ <- exprsToLLVM elseInstr
+    elseRes <- exprsToLLVM elseInstr
     br end
 
     end <- block `named` "if.end"
-    return $ int32 0
+    res <- phi [(thenRes, thenBlock), (elseRes, elseBlock)] `named` "if.res"
+    return res
 ifToLLVM n = error (getErrorMessage "If Expr" n)
 
 -------- EXPRS
@@ -502,7 +546,8 @@ defsToLLVM (Node _ (VDefs p es)) = mdo
 defsToLLVM n = error (getErrorMessage "Defs" n)
 
 parametersToString :: [(AST.Type, ParameterName)] -> [String]
-parametersToString list = (show . snd) <$> list
+parametersToString list = (\(_, ParameterName s) -> init (tail (show s)))
+                                <$> list
 
 -------- KDEFS
 

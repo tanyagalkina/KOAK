@@ -144,7 +144,7 @@ type DoubleConst = Double
 data Boolean = True | False
     deriving (Show, Eq)
 
-data Binop = Mul | Div | Add | Sub | Mod | Gt | Lt | Eq | Neq | Assign
+data Binop = Mul | Div | Add | Sub | Mod | Gt | Lt | Ge | Le | Eq | Neq | Assign
     deriving (Show, Eq)
 
 data Unop = Not | Minus
