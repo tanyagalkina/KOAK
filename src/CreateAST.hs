@@ -246,6 +246,7 @@ createUnary ti (UPostfix p) =
 
 createUnaryNode :: Value -> Node
 createUnaryNode v@(VUnary (Node t (VPostfix _ _)) _) = Node t v
+createUnaryNode v@(VUnary (Node _ (VUnop Not)) (Node _ (VUnary _ _))) = Node TBool v
 createUnaryNode v@(VUnary _ (Node t (VUnary _ _))) = Node t v
 createUnaryNode (VError s) = Error s
 createUnaryNode _ = Error "Typing of Unary failed"

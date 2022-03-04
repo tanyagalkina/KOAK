@@ -67,7 +67,7 @@ test "data/examples/unaryExamples/unaryExample4.koak" "true"
 test "data/examples/unaryExamples/unaryExample5.koak" "false"
 test "data/examples/unaryExamples/unaryExample6.koak" "true"
 test "data/examples/unaryExamples/unaryExample7.koak" "0"
-#test "data/examples/unaryExamples/unaryExample8.koak" "true"
+test "data/examples/unaryExamples/unaryExample8.koak" "true"
 test "data/examples/unaryExamples/unaryExample9.koak" "false"
 test "data/examples/unaryExamples/unaryExample10.koak" "true"
 test "data/examples/unaryExamples/unaryExample11.koak" "false"
@@ -79,8 +79,8 @@ test "data/examples/primaryExamples/primaryExample1.koak" "2"
 test "data/examples/primaryExamples/primaryExample2.koak" "true"
 test "data/examples/primaryExamples/primaryExample3.koak" "false"
 
-#test "data/examples/defsExamples/defsExample1.koak" "TO DO"
-#test "data/examples/defsExamples/defsExample2.koak" "TO DO"
+test "data/examples/defsExamples/defsExample1.koak" "30"
+test "data/examples/defsExamples/defsExample2.koak" "30"
 test "data/examples/defsExamples/defsExample3.koak" "2"
 
 test "data/examples/exprExamples/exprExample1.koak" "11" # WITH WRONG EVAL EXPR
@@ -95,12 +95,7 @@ test "data/examples/ifExprExamples/ifExprExample2.koak" "1"
 test "data/examples/forExprExamples/forExprExample1.koak" "10"
 test "data/examples/forExprExamples/forExprExample2.koak" "5"
 
-#test "data/examples/subjectExample.koak" "TO DO"
-
-# FUNCTIONS
-
-#test "data/functions/fibonnacci.koak" "TO DO"
-#test "data/functions/getNumber.koak" "TO DO"
+test "data/examples/subjectExample.koak" "7"
 
 # DELETE TEMPORARY FILE
 
