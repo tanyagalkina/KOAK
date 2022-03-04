@@ -78,7 +78,7 @@ import Prelude hiding (mod)
 
 import Data (Value (..), Binop (..), Type (..), Node (..), Codegen, Unop (..), ArgsType(..), IsDeclaration, Boolean (..), AST)
 import LLVM.AST.AddrSpace
-import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT))
+import LLVM.AST.FloatingPointPredicate (FloatingPointPredicate(OGT, OEQ, ONE, OLT, OLE, OGE))
 
 
 -------- HELPER
@@ -261,6 +261,8 @@ binopToLLVM u ((b, u'):bus) = do
     case nodeToVal b of
         (VBinop Data.Gt) -> gtToLLVM u restRes
         (VBinop Data.Lt) -> ltToLLVM u restRes
+        (VBinop Data.Ge) -> geToLLVM u restRes
+        (VBinop Data.Le) -> leToLLVM u restRes
         (VBinop Data.Eq) -> eqToLLVM u restRes
         (VBinop Data.Neq) -> neqToLLVM u restRes
         (VBinop Data.Assign) -> assignToLLVM u restRes
@@ -351,6 +353,26 @@ ltToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
         TBool -> icmp Sicmp.SLT a b
         _ ->  error (getErrorMessage "Lt" (Error ""))
 ltToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
+
+
+geToLLVM :: Node -> Operand -> Codegen Operand
+geToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.SGE a b
+        TDouble -> fcmp OGE a b
+        TBool -> icmp Sicmp.SGE a b
+        _ ->  error (getErrorMessage "Ge" (Error ""))
+geToLLVM n _ = error (getErrorMessage "Ge" n)
+
+leToLLVM :: Node -> Operand -> Codegen Operand
+leToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
+    case t of
+        TInteger -> icmp Sicmp.SLE a b
+        TDouble -> fcmp OLE a b
+        TBool -> icmp Sicmp.SLE a b
+        _ ->  error (getErrorMessage "Lt" (Error ""))
+leToLLVM _ _ = error (getErrorMessage "Lt" (Error ""))
+
 
 eqToLLVM :: Node -> Operand -> Codegen Operand
 eqToLLVM u@(Node t (VUnary _ _)) b = unaryToLLVM u >>= \a ->
