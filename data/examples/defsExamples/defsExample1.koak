@@ -1,3 +1,7 @@
 def plouf(a : int, b : int) : int
-    1 + a;
-2;
+    12 + a + b;
+
+def mdr() : int
+    2;
+
+plouf(1, 2) * mdr(); 
