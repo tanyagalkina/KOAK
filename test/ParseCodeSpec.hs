@@ -29,25 +29,7 @@ spec = do
     describe "parsePrototype"         testParsePrototype
     describe "parseDefs"              testParseDefs
     describe "parseKdefs"             testParseKdefs
-    describe "parseStmt"              testParseStmt
-    describe "parseDotNum"            testParseDotNum    
-
-testParseDotNum :: Spec
-testParseDotNum = do
-    it "runParser parseOnlyDotFloatStr \"FloatDot \"" $ do
-        runParser parseOnlyDotFloatStr "42. " `shouldBe` Just ("42.0", "")
-    it "runParser parseOnlyDotFloatStr \"FloatDot \"" $ do
-        runParser parseOnlyDotFloatStr "42. " `shouldBe` Just ("42.0", "")
-    it "runParser parseDotDouble \"Dottet Doubles like in Scheme \"" $ do
-         runParser parseOnlyDotDouble "42.  " `shouldBe` Just (42.0, " ")
-    it "runParser parseDouble \"Dottet Doubles like in Scheme \"" $ do
-         runParser parseDouble "42.42  " `shouldBe` Just (42.42, "  ")
-    it "runParser parseDotDouble \"Dottet Doubles like in Scheme \"" $ do
-        runParser parseOnlyDotDouble "42..  " `shouldBe` Nothing
-    it "runParser parseOnlyDotFloatStr \"FloatDotFail \"" $ do
-        runParser parseOnlyDotFloatStr "42." `shouldBe` Nothing    
-    
-
+    describe "parseStmt"              testParseStmt 
 
 testParseUnop :: Spec
 testParseUnop = do
@@ -91,6 +73,8 @@ testParseDoubleConst = do
         runParser parseDoubleConst "10.4  " `shouldBe` Just (10.4, "  ")
     it "runParser parseDoubleConst \".4  \"" $ do
         runParser parseDoubleConst ".4  " `shouldBe` Just (0.4, "  ")
+    it "runParser parseDoubleConst \"1.4  \"" $ do
+        runParser parseDoubleConst "1.4  " `shouldBe` Just (1.4, "  ")
     it "runParser parseDoubleConst \"10  \"" $ do
         runParser parseDoubleConst "10  " `shouldBe` Nothing
     it "runParser parseDoubleConst \"a\"" $ do

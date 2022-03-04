@@ -12,7 +12,7 @@ import Parser
       parseChar,
       parseEnd,
       parseInt,
-      parseOnlyDotDouble,
+      parseDotDouble,
       parseSome,
       parseSomeOut,
       parseString,
@@ -188,7 +188,7 @@ parseDecimalConst = parseWithSpaces parseInt
 -- parseDoubleConst
 
 parseDoubleConst :: Parser DoubleConst
-parseDoubleConst = parseWithSpaces parseOnlyDotDouble
+parseDoubleConst = parseWithSpaces parseDotDouble
 
 -- parseLiteral
 
