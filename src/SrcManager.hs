@@ -19,9 +19,6 @@ import Parser
 import ToLLVM (astToLLVM)
 import Data (Node (Error))
 
--- exampleExpr :: Node
--- exampleExpr = Node TInteger (VExprs [Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [(Node TNone (VBinop Assign),Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VLiteral (Node TInteger (VDecimalConst 21)))))) (Node TNone VNothing))) (Node TNone VNothing)))]),Node TInteger (VExpr (Node TInteger (VUnary (Node TInteger (VPostfix (Node TInteger (VPrimary (Node TInteger (VIdentifier "i")))) (Node TNone VNothing))) (Node TNone VNothing))) [])])
-
 -- create Module
 
 emptyModule :: ShortByteString -> AST.Module
@@ -49,15 +46,6 @@ process _ source = do
 
 processFiles :: [String] -> IO AST.Module
 processFiles fnames = concatSources "" fnames >>= process initModule
-
-
---OLD VERSION
--- concatSources :: String -> [String] -> IO String
--- concatSources base [] = return base
--- concatSources base (x:xs) = do
---     src <- readFile x
---     let cleanSource = replace '\n' ' ' src
---     concatSources (base ++ cleanSource) xs
 
 concatSources :: String -> [String] -> IO String
 concatSources base [] = return base
