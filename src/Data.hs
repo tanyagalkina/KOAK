@@ -58,10 +58,8 @@ data Value =
 
 type TypedId = Map Identifier Data.Type
 
--- kdefs* #eof
 type Stmt = [Kdefs]
 
--- 'def' defs ';' | expressions ';'
 data Kdefs = KDefs Defs
     | KExprs Exprs
     | KComs Coms
@@ -69,76 +67,59 @@ data Kdefs = KDefs Defs
 
 type Coms = String
 
--- prototype expressions
 data Defs = Defs Prototype Exprs
     deriving (Show, Eq)
 
---  ( 'unary' . decimal_const ? | 'binary' . decimal_const ? ) identifier prototype_args
 data Prototype = Prototype Identifier PrototypeArgs
     deriving (Show, Eq)
 
--- '(' ( identifier ':' type ','? ) * ')' ':' type
 data PrototypeArgs = PrototypeArgs [(Identifier, ArgsType)] ArgsType
     deriving (Show, Eq)
 
--- 'int' | 'double' | 'void'
 data ArgsType = Int | Double | Void
     deriving (Show, Eq)
 
--- for_expr | if_expr | while_expr | expression (':' expression )*
 data Exprs = EForExpr ForExpr
     | EWhileExpr WhileExpr
     | EIfExpr IfExpr
     | EExpr [Expr]
     deriving (Show, Eq)
 
--- 'for' identifier '=' expression ',' identifier '<' expression ',' expression 'in' expressions
 data ForExpr = ForExpr (Identifier, Expr) (Identifier, Expr) Expr Exprs
     deriving (Show, Eq)
 
--- 'if' expression 'then' expressions ('else' expressions )?
 data IfExpr = IfExpr Expr Exprs (Maybe Exprs)
     deriving (Show, Eq)
 
--- 'while' expression 'do' expressions
 data WhileExpr = WhileExpr Expr Exprs
     deriving (Show, Eq)
 
--- unary (#binop ( unary ) )*
 data Expr = Expr Unary [(Binop, Unary)]
     deriving (Show, Eq)
 
--- # unop unary | postfix
 data Unary = Unop Unop Unary | UPostfix Postfix
     deriving (Show, Eq)
 
--- primary call_expr?
 data Postfix = Postfix Primary (Maybe CallExpr)
     deriving (Show, Eq)
 
--- '(' ( expression (',' expression ) *) ? ')'
 type CallExpr = [Expr]
 
--- identifier | literal | '(' expressions ')'
 data Primary = PId Identifier
     | PLit Literal
     | PBoolean Boolean
     | PExprs Exprs
     deriving (Show, Eq)
 
--- [a - z A - Z][a - z A - Z 0 - 9]*
 type Identifier = String
 
 type IsDeclaration = Bool
 
---  decimal_const | double_const
 data Literal = LInt DecimalConst | LDouble DoubleConst
     deriving (Show, Eq)
 
--- [0 - 9]+
 type DecimalConst = Int
 
--- ( decimal_const dot [0 - 9]* | dot [0 - 9]+ )
 type DoubleConst = Double
 
 data Boolean = True | False
